@@ -8,32 +8,20 @@
 
 import SwiftUI
 
-//// MARK: - Screen ------------------------------------------------------------
-
 struct TaskFormScreen: View {
+    // Callback for closing the form
+    var onClose: () -> Void
     
-    // ── State ──
-    @Environment(\.dismiss) private var dismiss
-    @State private var title        = ""
-    @State private var date         = Date()
-    @State private var startTime    = Date()
-    @State private var endTime      = Date()
-    @State private var notes        = ""
-    @State private var repeatRule   = RepeatRule.none
+    // View-model injected from UIKit
+    @EnvironmentObject var vm: TaskFormViewModel
     
-    @State private var categories   = [
-        Category(name: "Work"),
-        Category(name: "Study"),
-        Category(name: "Household")
-    ]
-    @State private var selectedCat  : Category? = nil
-    
-    // sheet / dialog flags
+    // Sheet / dialog flags
     @State private var showDatePicker  = false
     @State private var showStartPicker = false
     @State private var showEndPicker   = false
     @State private var showRepeatSheet = false
-    @State private var showAddCatAlert = false
+    @State private var showAddCatDlg   = false
+    @State private var newCatName      = ""
     
     var body: some View {
         ZStack {
@@ -41,161 +29,175 @@ struct TaskFormScreen: View {
             
             ScrollView {
                 VStack(spacing: 24) {
-                    
-                    // Title
-                    LabeledBox("Title") {
-                        HStack {
-                            TextField("Title", text: $title)
-                                .foregroundColor(.white)
-                            if !title.isEmpty {
-                                Button { title = "" } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .foregroundColor(.wGreyText)
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Date + time chips
-                    HStack(spacing: 12) {
-                        Chip(text: dateLabel(date), filled: true) {
-                            showDatePicker = true
-                        }
-                        Chip(text: timeLabel(startTime)) {
-                            showStartPicker = true
-                        }
-                        Chip(text: timeLabel(endTime)) {
-                            showEndPicker = true
-                        }
-                    }
-                    
-                    // Categories chips
-                    FlowLayout(spacing: 12, lineSpacing: 12) {
-                        ForEach(categories) { cat in
-                            let on = selectedCat == cat
-                            Chip(text: cat.name, filled: on) {
-                                selectedCat = on ? nil : cat
-                            }
-                        }
-                        Chip(text: "+") { showAddCatAlert = true }
-                    }
-                    
-                    // Notes
-                    Text("Notes")
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    ZStack(alignment: .topLeading) {
-                        if notes.isEmpty {
-                            Text("Value")
-                                .foregroundColor(.wGreyText)
-                                .padding(8)
-                        }
-                        TextEditor(text: $notes)
-                            .scrollContentBackground(.hidden)
-                            .foregroundColor(.white)
-                            .padding(8)
-                    }
-                    .frame(height: 120)
-                    .background(Color.wSurface)
-                    .cornerRadius(12)
-                    
-                    // Repeat
-                    HStack {
-                        Text("Repeat")
-                            .foregroundColor(.white)
-                        Spacer()
-                        Chip(text: repeatRule.rawValue) {
-                            showRepeatSheet = true
-                        }
-                    }
-                    
+                    titleSection
+                    dateTimeSection
+                    categoriesSection
+                    notesSection
+                    repeatSection
                     Spacer(minLength: 40)
-                    
-                    Button {
-                        // TODO: save task
-                    } label: {
-                        Text("SAVE")
-                            .bold()
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.wBlue)
-                            .cornerRadius(12)
-                    }
-                    .disabled(title.isEmpty)
+                    saveButton
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 40)
             }
+            
+            if let err = vm.error {
+                errorToast(err)
+            }
         }
-        // MARK: navigation bar
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.white)
+                Button { onClose() } label: {
+                    Image(systemName: "xmark").foregroundColor(.white)
                 }
             }
         }
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("New task")
         .preferredColorScheme(.dark)
         
-        // MARK: sheets & dialogs
-        .sheet(isPresented: $showDatePicker) { datePickerSheet }
-        .sheet(isPresented: $showStartPicker) { timePickerSheet(binding: $startTime) }
-        .sheet(isPresented: $showEndPicker) { timePickerSheet(binding: $endTime) }
+        /* sheets / dialogs */
+        .sheet(isPresented: $showDatePicker)  { datePickerSheet }
+        .sheet(isPresented: $showStartPicker) { timePickerSheet($vm.start) }
+        .sheet(isPresented: $showEndPicker)   { timePickerSheet($vm.end) }
         .confirmationDialog("Repeat",
                             isPresented: $showRepeatSheet,
                             titleVisibility: .visible) {
             ForEach(RepeatRule.allCases, id: \.self) { r in
-                Button(r.rawValue) { repeatRule = r }
+                Button(r.rawValue) { vm.repeatRule = r }
             }
         }
-        .alert("New category", isPresented: $showAddCatAlert) {
+        .alert("New category", isPresented: $showAddCatDlg) {
+            TextField("Name", text: $newCatName)
             Button("Add") {
-                categories.append(Category(name: "New"))
+                let n = newCatName.trimmingCharacters(in: .whitespaces)
+                if !n.isEmpty { vm.addCat(n) }
+                newCatName = ""
             }
-            Button("Cancel", role: .cancel) { }
-        } message: {
-            Text("Adds a placeholder category named “New”.")
+            Button("Cancel", role: .cancel) { newCatName = "" }
         }
     }
+    
+    // MARK: sections -------------------------------------------------------
+    
+    private var titleSection: some View {
+        LabeledBox("Title") {
+            HStack {
+                TextField("Title", text: $vm.title)
+                    .foregroundColor(.white)
+                if !vm.title.isEmpty {
+                    Button { vm.title = "" } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.wGreyText)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var dateTimeSection: some View {
+        HStack(spacing: 12) {
+            Chip(text: dateLabel(vm.date), filled: true) { showDatePicker = true }
+            Chip(text: timeLabel(vm.start)) { showStartPicker = true }
+            Chip(text: timeLabel(vm.end))   { showEndPicker   = true }
+        }
+    }
+    
+    private var categoriesSection: some View {
+        FlowLayout(spacing: 12, lineSpacing: 12) {
+            ForEach(vm.categories, id: \.self) { cat in
+                let on = vm.selected == cat
+                Chip(text: cat, filled: on) {
+                    vm.selected = on ? nil : cat
+                }
+            }
+            Chip(text: "+") { showAddCatDlg = true }
+        }
+    }
+    
+    private var notesSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Notes").foregroundColor(.white)
+            ZStack(alignment: .topLeading) {
+                if vm.notes.isEmpty {
+                    Text("Value")
+                        .foregroundColor(.wGreyText)
+                        .padding(8)
+                }
+                TextEditor(text: $vm.notes)
+                    .scrollContentBackground(.hidden)
+                    .foregroundColor(.white)
+                    .padding(8)
+            }
+            .frame(height: 120)
+            .background(Color.wSurface)
+            .cornerRadius(12)
+        }
+    }
+    
+    private var repeatSection: some View {
+        HStack {
+            Text("Repeat").foregroundColor(.white)
+            Spacer()
+            Chip(text: vm.repeatRule.rawValue) {
+                showRepeatSheet = true
+            }
+        }
+    }
+    
+    private var saveButton: some View {
+        Button { vm.save() } label: {
+            Text("SAVE")
+                .bold()
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(vm.title.isEmpty ? Color.gray : Color.wBlue)
+                .cornerRadius(12)
+        }
+        .disabled(vm.title.isEmpty)
+    }
+    
+    // MARK: helper views ---------------------------------------------------
+    
+    private func errorToast(_ msg: String) -> some View {
+        Text(msg)
+            .foregroundColor(.white).padding()
+            .background(Color.red).cornerRadius(8)
+            .onAppear {
+                Task { try? await Task.sleep(for: .seconds(2)); vm.error = nil }
+            }
+            .transition(.move(edge: .top))
+    }
+    
 }
 
-// MARK: – Sheets ------------------------------------------------------------
+// MARK: – Sheets -----------------------------------------------------------
 
 private extension TaskFormScreen {
     
     var datePickerSheet: some View {
         VStack {
-            DatePicker("",
-                       selection: $date,
-                       displayedComponents: [.date])
-            .datePickerStyle(.graphical)
-            .tint(.wBlue)
+            DatePicker("", selection: $vm.date, displayedComponents: [.date])
+                .datePickerStyle(.graphical)
+                .tint(.wBlue)
             Button("Done") { showDatePicker = false }
                 .padding()
         }
-        .presentationDetents([.fraction(0.45)])
+        .presentationDetents([.fraction(0.65)])
     }
     
-    func timePickerSheet(binding: Binding<Date>) -> some View {
+    func timePickerSheet(_ binding: Binding<Date>) -> some View {
         VStack {
-            DatePicker("",
-                       selection: binding,
-                       displayedComponents: [.hourAndMinute])
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .tint(.wBlue)
+            DatePicker("", selection: binding, displayedComponents: [.hourAndMinute])
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .tint(.wBlue)
             Button("Done") {
                 showStartPicker = false
                 showEndPicker   = false
             }
             .padding()
         }
-        .presentationDetents([.fraction(0.35)])
+        .presentationDetents([.fraction(0.45)])
     }
 }
 
@@ -208,11 +210,14 @@ private func timeLabel(_ d: Date) -> String {
     d.formatted(date: .omitted, time: .shortened)
 }
 
+// MARK: – Preview -----------------------------------------------------------
 
 struct TaskFormScreen_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationStack { TaskFormScreen() }
-            .previewDevice("iPhone 15 Pro")
+        NavigationStack {
+            TaskFormScreen(){}
+                .environmentObject(TaskFormViewModel())
+        }
+        .previewDevice("iPhone 15 Pro")
     }
 }
-

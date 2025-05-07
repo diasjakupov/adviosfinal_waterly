@@ -10,31 +10,25 @@ import UIKit
 import SwiftUI
 
 final class HomeViewController: UIViewController {
-
-    private weak var host: UIHostingController<HomeScreen>?
-
+    private let vm = HomeViewModel(
+        repo: DefaultHomeRepository()
+    )
     override func viewDidLoad() {
         super.viewDidLoad()
-        embedHome()
-    }
-    
-    private func embedHome() {
-        let home = HomeScreen(
-            onAddTask: { [weak self] in
-                self?.showTaskForm()
-            }
+        let host = UIHostingController(
+            rootView: HomeScreen(
+                onAddTask: { [weak self] in self?.gotoForm() },
+                onSettings: {}
+            )
+            .environmentObject(vm)
         )
-        let hostVC = UIHostingController(rootView: home)
-        addChild(hostVC)
-        view.addSubview(hostVC.view)
-        hostVC.view.frame = view.bounds
-        hostVC.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        hostVC.didMove(toParent: self)
-        self.host = hostVC
+        addChild(host)
+        view.addSubview(host.view)
+        host.view.frame = view.bounds
+        host.view.autoresizingMask = [.flexibleWidth,.flexibleHeight]
+        host.didMove(toParent: self)
     }
-    
-    private func showTaskForm() {
-        let formVC = TaskFormViewController()
-        navigationController?.pushViewController(formVC, animated: true)
+    private func gotoForm() {
+        navigationController?.pushViewController(TaskFormViewController(), animated: true)
     }
 }

@@ -7,14 +7,29 @@
 
 import SwiftUI
 
-internal struct PillButton: View {
-    var text: String
-    var isOn: Bool
-    var action: () -> Void
+struct Toolbar: View {
+    var selected: TimeTab
+    var onSettingsClick: () -> Void
+    var onTabSelect: (TimeTab) -> Void      // callback
+    
     var body: some View {
-        Button(action: action) {
-            Text(text)
-                .fontWeight(.semibold)
+        HStack(spacing: 12) {
+            pill("Today",    tab: .today)
+            pill("Calendar", tab: .calendar)
+            Spacer()
+            Button(action: onSettingsClick) {
+                Image(systemName: "gearshape.fill")
+                    .foregroundColor(.white)
+                    .font(.title3)
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private func pill(_ text: String, tab: TimeTab) -> some View {
+        let isOn = tab == selected
+        Button { onTabSelect(tab) } label: {
+            Text(text).fontWeight(.semibold)
                 .foregroundColor(isOn ? .white : .wBlue)
                 .padding(.horizontal, 24).padding(.vertical, 12)
                 .background(

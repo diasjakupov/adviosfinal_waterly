@@ -15,4 +15,6 @@ extension Color {
     static let wGreyLight  = Color.white.opacity(0.7)
     static let wBorder   = Color.wBlue
     static let wGreyText = Color.white.opacity(0.65)
+    static let wCard   = Color.wSurface
+    static let wBadge  = Color.wBlue
 }

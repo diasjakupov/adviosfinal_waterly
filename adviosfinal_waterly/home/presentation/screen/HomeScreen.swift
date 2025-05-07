@@ -7,72 +7,95 @@
 
 import SwiftUI
 
-private let sampleTasks: [Task] = [
-    Task(title:"You Have A Meeting", start:"3:00 PM", end:"3:30 PM",
-         duration:"30 Min",
-         bg: Color(red:0.85,green:0.80,blue:0.78),
-         titleColor: Color(red:0.24,green:0.15,blue:0.14),
-         chipColor: Color(red:0.36,green:0.25,blue:0.22)),
-    Task(title:"You Have A Meeting", start:"4:00 PM", end:"4:30 PM",
-         duration:"30 Min",
-         bg: Color(red:0.66,green:0.69,blue:0.70),
-         titleColor: Color(red:0.23,green:0.28,blue:0.28),
-         chipColor: Color(red:0.23,green:0.28,blue:0.28))
-]
 
 struct HomeScreen: View {
-    var onAddTask:     () -> Void
+    // View-model injected from UIKit host
+    @EnvironmentObject private var vm: HomeViewModel
     
-    @State private var selected = 0
-    @State private var sheetHeight: CGFloat = 90
-    @State private var fraction: CGFloat = 0.7
+    // Call-backs supplied by HomeViewController
+    var onAddTask   : () -> Void
+    var onSettings  : () -> Void
+    
+    // Local UI state
+    @State private var sheetHeight: CGFloat = 120
+    @State private var infoTask   : TaskUI?   = nil          // bottom-sheet
+    
+    init(onAddTask: @escaping () -> Void,
+                onSettings: @escaping () -> Void) {
+        self.onAddTask  = onAddTask
+        self.onSettings = onSettings
+    }
     
     var body: some View {
         ZStack {
             Color.wBackground.ignoresSafeArea()
             
-            VStack(spacing: 24) {
-                // Toolbar
-                HStack(spacing: 12) {
-                    PillButton(text: "Today",   isOn: selected == 0) { selected = 0 }
-                    PillButton(text: "Calendar",isOn: selected == 1) { selected = 1 }
-                    Spacer()
-                    Button { /* settings nav */ } label: {
-                        Image(systemName: "gearshape.fill")
-                            .foregroundColor(.white)
-                            .font(.title3)
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                
-                // Wave gauge
-                WaveGauge(fraction: fraction)
-                    .frame(width:280,height:280)
-                    .onTapGesture {
-                        onAddTask()
-                    }
-                
-                // Statistics card
-                StatisticCard()
-                    .padding(.horizontal)
-                
-                Spacer()
-            }
-            
-            // Bottom sheet
-            BottomSheet(height: $sheetHeight) {
-                TodayTasksSection(tasks: sampleTasks)
+            if vm.tab == .today {
+                todayTab
             }
         }
         .preferredColorScheme(.dark)
+        .sheetTaskInfo(task: $infoTask){ task, status in
+            vm.setStatus(of: task.id, to: status)
+        }
     }
+    
+    private var todayTab: some View {
+        VStack(spacing: 32) {
+            
+            Toolbar(selected: vm.tab,
+                    onSettingsClick: onSettings) { tab in
+                vm.switchTab(tab)
+            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            
+            
+            // WaveGauge – tap to open task form
+            WaveGauge(fraction: vm.doneFraction)
+                .frame(width: 260, height: 260)
+                .onTapGesture { onAddTask() }
+            
+            Spacer()
+        }.overlay(bottomSheet)
+    }
+    
+    @ViewBuilder private var bottomSheet: some View {
+        let uiToday = vm.today.enumerated()
+            .map { TaskModelMapper.toUi($0.element, index: $0.offset) }
+        
+        CustomBottomSheet(height: $sheetHeight) {
+            TodayTasksSection(tasks: uiToday) { t in
+                infoTask = t
+            }
+        }
+    }
+
 }
 
+
+private extension View {
+    @ViewBuilder
+    func sheetTaskInfo(task: Binding<TaskUI?>, onChangeStatus: @escaping (TaskUI, TaskStatus) -> Void) -> some View {
+        self.sheet(item: task) { t in
+            TaskInfoBottomSheet(
+                task: t,
+                onDismiss: { task.wrappedValue = nil },
+                onChangeStatus: { newStatus in
+                    onChangeStatus(t, newStatus)
+                }
+            )
+            .presentationDetents([.medium])
+        }
+    }
+}
 
 
 struct HomeScreen_Previews: PreviewProvider {
     static var previews: some View { HomeScreen {
         
-    } }
+    } onSettings: {
+        
+    }
+}
 }
