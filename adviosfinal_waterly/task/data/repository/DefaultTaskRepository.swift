@@ -8,6 +8,7 @@
 
 import CoreData
 import Foundation
+import UserNotifications
 
 
 final class DefaultTaskRepository: TaskRepository {
@@ -57,6 +58,10 @@ final class DefaultTaskRepository: TaskRepository {
                 guard let obj = try ctx.fetch(r).first else { return }
                 obj.status = s.rawValue
                 try ctx.save()
+                if s == .done {
+                    UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id.uuidString])
+                }
             }
         }
-}
+    }
+

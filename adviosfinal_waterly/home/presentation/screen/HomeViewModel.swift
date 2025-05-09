@@ -7,7 +7,6 @@
 
 import SwiftUI
 
-
 @MainActor
 final class HomeViewModel: ObservableObject {
     @Published var tab: TimeTab = .today
@@ -16,32 +15,36 @@ final class HomeViewModel: ObservableObject {
     @Published var doneFraction: CGFloat = 0
     @Published var allTasks: [TaskModel] = [] 
 
-    private let repo: HomeRepository
+    private let getTaskStreamUseCase: GetTaskStreamUseCase
+    private let updateTaskStatusUseCase: UpdateHomeTaskStatusUseCase
     private var streamTask: Task<Void, Never>? = nil
 
     var calendarDays: [DayStub] {
-    grouped.keys.sorted().map { date in
-        let tasks = grouped[date] ?? []
-        let categoryCounts = Dictionary(grouping: tasks) { $0.category ?? "Other" }
-            .map { (name: $0.key, count: $0.value.count) }
-        return DayStub(date: date, groups: categoryCounts)
+        grouped.keys.sorted().map { date in
+            let tasks = grouped[date] ?? []
+            let categoryCounts = Dictionary(grouping: tasks) { $0.category ?? "Other" }
+                .map { (name: $0.key, count: $0.value.count) }
+            return DayStub(date: date, groups: categoryCounts)
+        }
     }
-}
     
-    public init(repo: HomeRepository) {
-        self.repo = repo
+    public init(
+        getTaskStreamUseCase: GetTaskStreamUseCase,
+        updateTaskStatusUseCase: UpdateHomeTaskStatusUseCase
+    ) {
+        self.getTaskStreamUseCase = getTaskStreamUseCase
+        self.updateTaskStatusUseCase = updateTaskStatusUseCase
         listen()
     }
     
-    
     func setStatus(of id: UUID, to s: TaskStatus) {
-        Task { try? await repo.updateStatus(id: id, to: s) }
+        Task { try? await updateTaskStatusUseCase.execute(id: id, status: s) }
     }
     
     private func listen() {
         streamTask = Task {
             do {
-                for try await list in repo.taskStream() {
+                for try await list in getTaskStreamUseCase.execute() {
                     print("------------------")
                     print("items: \(list)")
                     update(with: list)
@@ -51,7 +54,6 @@ final class HomeViewModel: ObservableObject {
             }
         }
     }
-    
     
     private func update(with list:[TaskModel]) {
         let cal = Calendar.current

@@ -231,14 +231,3 @@ private func timeLabel(_ d: Date) -> String {
     d.formatted(date: .omitted, time: .shortened)
 }
 
-// MARK: – Preview -----------------------------------------------------------
-
-struct TaskFormScreen_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationStack {
-            TaskFormScreen(){}
-                .environmentObject(TaskFormViewModel())
-        }
-        .previewDevice("iPhone 15 Pro")
-    }
-}

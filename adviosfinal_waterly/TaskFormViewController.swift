@@ -16,7 +16,18 @@ final class TaskFormViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let vm = TaskFormViewModel()
+        let repository = DefaultTaskRepository()
+        let addTaskUseCase = AddTaskUseCase(repository: repository)
+        let getCategoriesUseCase = GetCategoriesUseCase(repository: repository)
+        let settingsRepository = SettingsRepositoryImpl()
+        let syncTaskToGoogleCalendarUseCase = SyncTaskToGoogleCalendarUseCase(repository: settingsRepository)
+        let restoreSignInUseCase = RestoreGoogleSignInUseCase(repository: settingsRepository)
+        let vm = TaskFormViewModel(
+            addTaskUseCase: addTaskUseCase,
+            getCategoriesUseCase: getCategoriesUseCase,
+            syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
+            restoreGoogleSignInUseCase: restoreSignInUseCase
+        )
         let host = UIHostingController(
             rootView: NavigationStack {
                 TaskFormScreen(onClose: { [weak self] in

@@ -10,9 +10,23 @@ import UIKit
 import SwiftUI
 
 final class HomeViewController: UIViewController {
-    private let vm = HomeViewModel(
-        repo: DefaultHomeRepository()
-    )
+    private let vm: HomeViewModel
+    
+    init() {
+        let repository = DefaultHomeRepository()
+        let getTaskStreamUseCase = GetTaskStreamUseCase(repository: repository)
+        let updateTaskStatusUseCase = UpdateHomeTaskStatusUseCase(repository: repository)
+        self.vm = HomeViewModel(
+            getTaskStreamUseCase: getTaskStreamUseCase,
+            updateTaskStatusUseCase: updateTaskStatusUseCase
+        )
+        super.init(nibName: nil, bundle: nil)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         let host = UIHostingController(
@@ -28,7 +42,6 @@ final class HomeViewController: UIViewController {
         host.view.autoresizingMask = [.flexibleWidth,.flexibleHeight]
         host.didMove(toParent: self)
     }
-    
     
     private func gotoForm() {
         navigationController?.pushViewController(TaskFormViewController(), animated: true)

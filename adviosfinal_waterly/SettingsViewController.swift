@@ -14,7 +14,6 @@ final class SettingsViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Setup Clean Architecture dependencies
         let repository = SettingsRepositoryImpl()
         let connectUseCase = ConnectGoogleCalendarUseCase(repository: repository)
         let disconnectUseCase = DisconnectGoogleCalendarUseCase(repository: repository)
