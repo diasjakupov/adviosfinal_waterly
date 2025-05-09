@@ -18,7 +18,7 @@ final class HomeViewController: UIViewController {
         let host = UIHostingController(
             rootView: HomeScreen(
                 onAddTask: { [weak self] in self?.gotoForm() },
-                onSettings: {}
+                onSettings: { [weak self] in self?.showSettings() }
             )
             .environmentObject(vm)
         )
@@ -28,7 +28,14 @@ final class HomeViewController: UIViewController {
         host.view.autoresizingMask = [.flexibleWidth,.flexibleHeight]
         host.didMove(toParent: self)
     }
+    
+    
     private func gotoForm() {
         navigationController?.pushViewController(TaskFormViewController(), animated: true)
+    }
+    
+    private func showSettings() {
+        let vc = SettingsViewController()
+        navigationController?.pushViewController(vc, animated: true)
     }
 }

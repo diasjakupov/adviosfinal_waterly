@@ -17,6 +17,16 @@ final class HomeViewModel: ObservableObject {
     
     private let repo: HomeRepository
     private var streamTask: Task<Void, Never>? = nil
+
+    var calendarDays: [DayStub] {
+    grouped.keys.sorted().map { date in
+        let tasks = grouped[date] ?? []
+        // Group by category, count tasks per category
+        let categoryCounts = Dictionary(grouping: tasks) { $0.category ?? "Other" }
+            .map { (name: $0.key, count: $0.value.count) }
+        return DayStub(date: date, groups: categoryCounts)
+    }
+}
     
     public init(repo: HomeRepository) {
         self.repo = repo

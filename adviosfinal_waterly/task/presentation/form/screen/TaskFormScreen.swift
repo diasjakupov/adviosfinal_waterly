@@ -38,6 +38,7 @@ struct TaskFormScreen: View {
                     saveButton
                 }
                 .padding(.horizontal)
+                .padding(.top, 16)
                 .padding(.bottom, 40)
             }
             
@@ -94,10 +95,31 @@ struct TaskFormScreen: View {
     }
     
     private var dateTimeSection: some View {
-        HStack(spacing: 12) {
-            Chip(text: dateLabel(vm.date), filled: true) { showDatePicker = true }
-            Chip(text: timeLabel(vm.start)) { showStartPicker = true }
-            Chip(text: timeLabel(vm.end))   { showEndPicker   = true }
+        HStack {
+            Chip(text: dateLabel(vm.date), filled: true) {
+                showDatePicker = true
+            }
+            .font(.body)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 16)
+
+            Spacer()
+
+            HStack(spacing: 4) {
+                Chip(text: timeLabel(vm.start)) {
+                    showStartPicker = true
+                }
+                .font(.body)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+
+                Chip(text: timeLabel(vm.end)) {
+                    showEndPicker = true
+                }
+                .font(.body)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
+            }
         }
     }
     
@@ -200,7 +222,6 @@ private extension TaskFormScreen {
         .presentationDetents([.fraction(0.45)])
     }
 }
-
 // MARK: – Format helpers ----------------------------------------------------
 
 private func dateLabel(_ d: Date) -> String {

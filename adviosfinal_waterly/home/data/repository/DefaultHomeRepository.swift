@@ -48,14 +48,6 @@ final class DefaultHomeRepository: HomeRepository {
     func fetch() async throws -> [TaskModel] {
         try await ctx.perform { [self] in
             let request: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
-            let calendar = Calendar.current
-            let startOfDay = calendar.startOfDay(for: Date())
-            let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
-            request.predicate = NSPredicate(
-                format: "date >= %@ AND date < %@",
-                startOfDay as NSDate,
-                endOfDay as NSDate
-            )
             request.sortDescriptors = [
                 NSSortDescriptor(key: "date", ascending: true),
                 NSSortDescriptor(key: "startTime", ascending: true)
@@ -111,7 +103,7 @@ private extension TaskModel {
                   notes: e.notes ?? "",
                   category: e.category,
                   repeatRule: RepeatRule(rawValue: e.repeatRaw ?? "") ?? .none,
-                  status: TaskStatus(rawValue: e.status!) ?? .created
+                  status: TaskStatus(rawValue: e.status ?? "") ?? .created
         )
         self.id = e.id ?? UUID()
     }

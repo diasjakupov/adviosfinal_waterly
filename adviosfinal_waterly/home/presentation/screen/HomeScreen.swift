@@ -20,6 +20,18 @@ struct HomeScreen: View {
     @State private var sheetHeight: CGFloat = 120
     @State private var infoTask   : TaskUI?   = nil          // bottom-sheet
     
+    private let days: [DayStub] = {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        return (0..<10).map { offset in
+            DayStub(
+                date: cal.date(byAdding: .day, value: offset, to: today)!,
+                groups: [("Daily", .random(in:1...4)),
+                         ("Work",  .random(in:1...4))]
+            )
+        }
+    }()
+    
     init(onAddTask: @escaping () -> Void,
                 onSettings: @escaping () -> Void) {
         self.onAddTask  = onAddTask
@@ -30,9 +42,10 @@ struct HomeScreen: View {
         ZStack {
             Color.wBackground.ignoresSafeArea()
             
-            if vm.tab == .today {
-                todayTab
-            }
+            switch vm.tab {
+             case .today:     todayTab
+             case .calendar:  calendarTab          // ← NEW
+             }
         }
         .preferredColorScheme(.dark)
         .sheetTaskInfo(task: $infoTask){ task, status in
@@ -58,6 +71,23 @@ struct HomeScreen: View {
             
             Spacer()
         }.overlay(bottomSheet)
+    }
+    
+    private var calendarTab: some View {
+        VStack(spacing: 16) {
+            Toolbar(selected: vm.tab,
+                    onSettingsClick: onSettings) { vm.switchTab($0) }
+                .padding(.horizontal).padding(.top, 8)
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    ForEach(vm.calendarDays) { day in CalendarCard(day: day) }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 36)
+            }
+            Spacer()
+        }
     }
     
     @ViewBuilder private var bottomSheet: some View {
