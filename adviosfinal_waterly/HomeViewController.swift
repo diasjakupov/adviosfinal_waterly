@@ -36,6 +36,7 @@ final class HomeViewController: UIViewController {
     
     private func showSettings() {
         let vc = SettingsViewController()
+        vc.homeViewModel = vm
         navigationController?.pushViewController(vc, animated: true)
     }
 }

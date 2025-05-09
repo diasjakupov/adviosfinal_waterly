@@ -14,14 +14,14 @@ final class HomeViewModel: ObservableObject {
     @Published var today: [TaskModel] = []
     @Published var grouped: [Date:[TaskModel]] = [:]
     @Published var doneFraction: CGFloat = 0
-    
+    @Published var allTasks: [TaskModel] = [] 
+
     private let repo: HomeRepository
     private var streamTask: Task<Void, Never>? = nil
 
     var calendarDays: [DayStub] {
     grouped.keys.sorted().map { date in
         let tasks = grouped[date] ?? []
-        // Group by category, count tasks per category
         let categoryCounts = Dictionary(grouping: tasks) { $0.category ?? "Other" }
             .map { (name: $0.key, count: $0.value.count) }
         return DayStub(date: date, groups: categoryCounts)
@@ -59,6 +59,8 @@ final class HomeViewModel: ObservableObject {
         today   = list.filter{ cal.isDateInToday($0.date) }
         let done = today.filter { $0.status == .done }.count
         doneFraction = today.isEmpty ? 0 : CGFloat(done)/CGFloat(today.count)
+        print("allTasks: \(list)")
+        allTasks = list
     }
     
     /* UI helpers */

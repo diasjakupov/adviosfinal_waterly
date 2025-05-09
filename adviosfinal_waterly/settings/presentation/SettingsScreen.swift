@@ -8,9 +8,9 @@
 import SwiftUI
 
 struct SettingsScreen: View {
-    var onClose: () -> Void                          // supplied by VC
-    
-    @State private var notifEnabled = false          // UI-only stub
+    var onClose: () -> Void
+    @ObservedObject var vm: SettingsViewModel
+    @State private var showGoogleError = false
 
     var body: some View {
         ZStack {
@@ -20,12 +20,48 @@ struct SettingsScreen: View {
                 VStack(alignment: .leading, spacing: 32) {
                     SectionHeader("Personalization")
                     VStack(spacing: 20) {
-                        row(icon: "calendar",   title: "Calendar") { }
-                        row(icon: "bell",       title: "Notification") {
-                            Toggle("", isOn: $notifEnabled)
-                                .toggleStyle(.switch)
+                        row(icon: "calendar",   title: vm.isGoogleConnected ? "Connected: \(vm.googleUserEmail ?? "")" : "Connect with Google Calendar") {
+                            Button(action: {
+                                Task {
+                                    if let vc = UIApplication.shared.topViewController() {
+                                        if vm.isGoogleConnected {
+                                            vm.disconnectGoogleCalendar()
+                                        } else {
+                                            await vm.connectGoogleCalendar(presentingViewController: vc)
+                                        }
+                                    }
+                                }
+                            }) {
+                                Text(vm.isGoogleConnected ? "Disconnect" : "Connect")
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.wBlue)
+                                    .cornerRadius(8)
+                            }
+                            if vm.isGoogleConnected {
+                                Button("Sync Tasks") {
+                                    Task { await vm.syncAllTasksToGoogleCalendar() }
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(Color.green)
+                                .cornerRadius(8)
+                            }
                         }
-                        row(icon: "icloud",     title: "Sync") { }
+                        if !vm.syncStatus.isEmpty {
+                            Text(vm.syncStatus)
+                                .foregroundColor(.white)
+                                .padding(.top, 4)
+                        }
+                        row(icon: "bell",       title: "Notification") {
+                            Toggle("", isOn: $vm.notifEnabled)
+                                .toggleStyle(.switch)
+                                .onChange(of: vm.notifEnabled) { isOn in
+                                    vm.toggleNotifications(isOn)
+                                }
+                        }
                     }
                     
                     SectionHeader("Subscription")
@@ -35,6 +71,14 @@ struct SettingsScreen: View {
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
+            }
+            .alert("Google Auth Error", isPresented: Binding(
+                get: { vm.googleAuthError != nil },
+                set: { _ in vm.googleAuthError = nil }
+            )) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(vm.googleAuthError ?? "")
             }
         }
         .toolbar {
@@ -76,5 +120,24 @@ struct SettingsScreen: View {
                 Image(systemName: "xmark").foregroundColor(.white)
             }
         }
+    }
+}
+
+// Helper to get the top UIViewController for presenting Google Sign-In
+extension UIApplication {
+    func topViewController(base: UIViewController? = nil) -> UIViewController? {
+        let base = base ?? UIApplication.shared.connectedScenes
+            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
+            .first?.rootViewController
+        if let nav = base as? UINavigationController {
+            return topViewController(base: nav.visibleViewController)
+        }
+        if let tab = base as? UITabBarController {
+            return topViewController(base: tab.selectedViewController)
+        }
+        if let presented = base?.presentedViewController {
+            return topViewController(base: presented)
+        }
+        return base
     }
 }
