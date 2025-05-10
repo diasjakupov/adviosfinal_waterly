@@ -9,10 +9,12 @@
 /* Begin PBXBuildFile section */
 		23D279B32DCE4D8100116B69 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 23D279B22DCE4D8100116B69 /* GoogleSignIn */; };
 		23D279B52DCE4D8100116B69 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 23D279B42DCE4D8100116B69 /* GoogleSignInSwift */; };
+		23D279FD2DCFB60700116B69 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 23D279FC2DCFB60700116B69 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		23D278CD2DC9462500116B69 /* adviosfinal_waterly.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = adviosfinal_waterly.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		23D279FC2DCFB60700116B69 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -52,6 +54,7 @@
 		23D278C42DC9462500116B69 = {
 			isa = PBXGroup;
 			children = (
+				23D279FC2DCFB60700116B69 /* README.md */,
 				23D278CF2DC9462500116B69 /* adviosfinal_waterly */,
 				23D278CE2DC9462500116B69 /* Products */,
 			);
@@ -134,6 +137,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23D279FD2DCFB60700116B69 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

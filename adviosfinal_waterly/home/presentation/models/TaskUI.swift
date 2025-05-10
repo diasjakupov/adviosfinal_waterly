@@ -51,7 +51,6 @@ enum TaskModelMapper {
         )
     }
     
-    // returns "1h 15m" etc.
     private static func timeLabel(_ start: Date, _ end: Date) -> String {
         let min = Int(end.timeIntervalSince(start) / 60)
         if min >= 60 {

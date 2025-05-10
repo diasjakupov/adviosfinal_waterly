@@ -12,19 +12,17 @@ struct CalendarCard: View {
     
     var body: some View {
         HStack {
-            /* left: big date */
             VStack(alignment: .leading, spacing: 0) {
                 Text(day.date, format: .dateTime.weekday())
                     .font(.subheadline).foregroundColor(.white)
                 Text(day.date, format: .dateTime.day())
                     .font(.system(size: 44, weight: .bold))
                     .foregroundColor(.white)
-                Text(day.date, format: .dateTime.month(.abbreviated)) // DEC
+                Text(day.date, format: .dateTime.month(.abbreviated))
                     .font(.title3).bold().foregroundColor(.white)
             }
             Spacer(minLength: 32)
             
-            /* right: category badges */
             VStack(alignment: .trailing, spacing: 12) {
                 ForEach(day.groups, id: \.name) { g in
                     HStack(spacing: 8) {

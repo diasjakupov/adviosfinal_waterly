@@ -9,9 +9,9 @@ import SwiftUI
 
 struct CustomBottomSheet<Content: View>: View {
     private let minHeight: CGFloat = 120
-    private let maxFraction: CGFloat = 0.85           // 85 % of screen
+    private let maxFraction: CGFloat = 0.85
     
-    @Binding var height: CGFloat                      // external snap-point
+    @Binding var height: CGFloat
     @GestureState private var dragOffset: CGFloat = 0
     
     @ViewBuilder var content: Content
@@ -42,7 +42,7 @@ struct CustomBottomSheet<Content: View>: View {
                     .onEnded { val in
                         let proposed = height - val.translation.height
                         let threshold = (minHeight + maxHeight) / 2
-                        height = proposed > threshold ? maxHeight : minHeight   // ← fixed
+                        height = proposed > threshold ? maxHeight : minHeight
                     }
             )
         }
