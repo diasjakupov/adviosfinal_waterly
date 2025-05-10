@@ -16,45 +16,41 @@ struct WaveGauge: View {
                   speed    : .random(in: 3...7),
                   phase0   : .random(in: 0...2*CGFloat.pi))
     }
-    @State private var animatedFraction: CGFloat = 0
     private let bobPeriod: TimeInterval = 10
     
     var body: some View {
-        TimelineView(.animation) { ctx in
-            let t = ctx.date.timeIntervalSinceReferenceDate
-            let f = animatedFraction.clamped(to: 0...1)
+        TimelineView(.animation) { context in
+            let currentTime = context.date.timeIntervalSinceReferenceDate
+            let clampedFraction = fraction.clamped(to: 0...1)
             
-            Canvas { context, size in
-                context.clip(to: Path(ellipseIn: CGRect(origin: .zero, size: size)))
+            Canvas { canvasContext, canvasSize in
+                canvasContext.clip(to: Path(ellipseIn: CGRect(origin: .zero, size: canvasSize)))
                 
-                let baseY0 = size.height * (1 - f)
-                let bob = sin(t * .pi * 2 / bobPeriod) * (waves.map(\.amplitude).max() ?? 0) * 0.4
-                let baseY = baseY0 + bob
+                let baseWaterLevelY = canvasSize.height * (1 - clampedFraction)
+                let bobbingOffset = sin(currentTime * .pi * 2 / bobPeriod) * (waves.map(\ .amplitude).max() ?? 0) * 0.4
+                let waterLevelY = baseWaterLevelY + bobbingOffset
                 
-                for (idx,w) in waves.enumerated() {
-                    let phase = w.phase0 + CGFloat(t / w.speed) * .pi * 2
-                    let amp   = w.amplitude * (0.5 + 0.5 * sin(phase * 2))
-                    let alpha = 1 - CGFloat(idx)/CGFloat(waves.count) * 0.6
+                for (waveIndex, wave) in waves.enumerated() {
+                    let phase = wave.phase0 + CGFloat(currentTime / wave.speed) * .pi * 2
+                    let amplitude = wave.amplitude * (0.5 + 0.5 * sin(phase * 2))
+                    let opacity = 1 - CGFloat(waveIndex)/CGFloat(waves.count) * 0.6
                     
-                    var path = Path()
-                    path.move(to: .init(x:0,y:size.height))
-                    path.addLine(to: .init(x:0,y:baseY))
-                    for x in stride(from:0, through:size.width, by:1) {
-                        let rel = x / (size.width / w.waveLen)
-                        let y = baseY + sin(rel * .pi*2 + phase) * amp
-                        path.addLine(to:.init(x:x,y:y))
+                    var wavePath = Path()
+                    wavePath.move(to: .init(x:0, y:canvasSize.height))
+                    wavePath.addLine(to: .init(x:0, y:waterLevelY))
+                    for x in stride(from: 0, through: canvasSize.width, by: 1) {
+                        let relativeX = x / (canvasSize.width / wave.waveLen)
+                        let y = waterLevelY + sin(relativeX * .pi*2 + phase) * amplitude
+                        wavePath.addLine(to: .init(x: x, y: y))
                     }
-                    path.addLine(to:.init(x:size.width,y:size.height))
-                    path.closeSubpath()
-                    context.fill(path, with:.color(Color.wBlue.opacity(alpha)))
+                    wavePath.addLine(to: .init(x: canvasSize.width, y: canvasSize.height))
+                    wavePath.closeSubpath()
+                    canvasContext.fill(wavePath, with: .color(Color.wBlue.opacity(opacity)))
                 }
             }
         }
-        .animation(.easeInOut(duration: 0.6), value: animatedFraction)
-        .onChange(of: fraction) { animatedFraction = $0 }
-        .onAppear { animatedFraction = fraction }
         .overlay(
-            Circle().stroke(Color.wBlueLight,lineWidth:8)
+            Circle().stroke(Color.wBlueLight, lineWidth: 8)
         )
     }
     private struct WaveParam { let amplitude:CGFloat;let waveLen:CGFloat;let speed:TimeInterval;let phase0:CGFloat }
