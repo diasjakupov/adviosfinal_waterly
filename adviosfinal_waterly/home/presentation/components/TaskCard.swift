@@ -7,15 +7,12 @@
 
 import SwiftUI
 
-internal struct TodayTasksSection: View {
+internal struct TasksSection: View {
     var tasks: [TaskUI]
     var onTap: (TaskUI) -> Void           // pass tap up to HomeScreen
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Today's tasks")
-                .font(.title2).bold().foregroundColor(.white)
-            
             ScrollView {                                // ① scrolls
                 LazyVStack(spacing: 12) {
                     ForEach(tasks) { t in

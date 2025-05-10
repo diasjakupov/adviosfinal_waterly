@@ -10,7 +10,7 @@ import UIKit
 import SwiftUI
 
 final class SettingsViewController: UIViewController {
-    var homeViewModel: HomeViewModel! // Set from HomeViewController
+    var allTasks: [TaskModel]!
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -20,21 +20,19 @@ final class SettingsViewController: UIViewController {
         let syncUseCase = SyncTasksToGoogleCalendarUseCase(repository: repository)
         let toggleNotifUseCase = ToggleNotificationsUseCase(repository: repository)
         let restoreSignInUseCase = RestoreGoogleSignInUseCase(repository: repository)
-        let getAllTasks = { [weak homeViewModel] in homeViewModel?.allTasks ?? [] }
         let vm = SettingsViewModel(
             connectGoogleCalendarUseCase: connectUseCase,
             disconnectGoogleCalendarUseCase: disconnectUseCase,
             syncTasksToGoogleCalendarUseCase: syncUseCase,
             toggleNotificationsUseCase: toggleNotifUseCase,
             restoreGoogleSignInUseCase: restoreSignInUseCase,
-            getAllTasks: getAllTasks
+            allTasks: allTasks
         )
         let root = NavigationStack {
             SettingsScreen(onClose: { [weak self] in
                 self?.navigationController?.popViewController(animated: true)
             }, vm: vm)
         }
-        .environmentObject(homeViewModel)
 
         let host = UIHostingController(rootView: root)
         addChild(host)

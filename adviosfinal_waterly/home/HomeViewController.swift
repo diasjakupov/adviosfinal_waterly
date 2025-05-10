@@ -32,7 +32,8 @@ final class HomeViewController: UIViewController {
         let host = UIHostingController(
             rootView: HomeScreen(
                 onAddTask: { [weak self] in self?.gotoForm() },
-                onSettings: { [weak self] in self?.showSettings() }
+                onSettings: { [weak self] in self?.showSettings() },
+                onAnalytics: { [weak self] in self?.showStatistics() }
             )
             .environmentObject(vm)
         )
@@ -49,7 +50,12 @@ final class HomeViewController: UIViewController {
     
     private func showSettings() {
         let vc = SettingsViewController()
-        vc.homeViewModel = vm
+        vc.allTasks = vm.allTasks
+        navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    private func showStatistics() {
+        let vc = StatisticsViewController()
         navigationController?.pushViewController(vc, animated: true)
     }
 }

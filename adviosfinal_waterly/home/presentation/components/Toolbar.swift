@@ -10,6 +10,7 @@ import SwiftUI
 struct Toolbar: View {
     var selected: TimeTab
     var onSettingsClick: () -> Void
+    var onAnalyticsClick: () -> Void
     var onTabSelect: (TimeTab) -> Void      // callback
     
     var body: some View {
@@ -17,6 +18,11 @@ struct Toolbar: View {
             pill("Today",    tab: .today)
             pill("Calendar", tab: .calendar)
             Spacer()
+            Button(action: onAnalyticsClick) {
+                Image(systemName: "chart.pie.fill")
+                    .foregroundColor(.white)
+                    .font(.title3)
+            }
             Button(action: onSettingsClick) {
                 Image(systemName: "gearshape.fill")
                     .foregroundColor(.white)

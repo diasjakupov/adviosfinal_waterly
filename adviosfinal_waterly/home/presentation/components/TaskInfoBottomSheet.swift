@@ -75,7 +75,6 @@ struct TaskInfoBottomSheet: View, Identifiable {
         }
         .padding(.horizontal)
         .background(Color.wSurface)
-        .cornerRadius(24, corners:[.topLeft,.topRight])
         .ignoresSafeArea(.container, edges: .bottom)
     }
     

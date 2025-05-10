@@ -23,7 +23,7 @@ final class SettingsViewModel: ObservableObject {
     private let syncTasksToGoogleCalendarUseCase: SyncTasksToGoogleCalendarUseCase
     private let toggleNotificationsUseCase: ToggleNotificationsUseCase
     private let restoreGoogleSignInUseCase: RestoreGoogleSignInUseCase
-    private let getAllTasks: () -> [TaskModel]
+    private let allTasks: [TaskModel]
 
     init(
         connectGoogleCalendarUseCase: ConnectGoogleCalendarUseCase,
@@ -31,18 +31,17 @@ final class SettingsViewModel: ObservableObject {
         syncTasksToGoogleCalendarUseCase: SyncTasksToGoogleCalendarUseCase,
         toggleNotificationsUseCase: ToggleNotificationsUseCase,
         restoreGoogleSignInUseCase: RestoreGoogleSignInUseCase,
-        getAllTasks: @escaping () -> [TaskModel]
+        allTasks: [TaskModel]
     ) {
         self.connectGoogleCalendarUseCase = connectGoogleCalendarUseCase
         self.disconnectGoogleCalendarUseCase = disconnectGoogleCalendarUseCase
         self.syncTasksToGoogleCalendarUseCase = syncTasksToGoogleCalendarUseCase
         self.toggleNotificationsUseCase = toggleNotificationsUseCase
         self.restoreGoogleSignInUseCase = restoreGoogleSignInUseCase
-        self.getAllTasks = getAllTasks
+        self.allTasks = allTasks
         Task { await self.restoreGoogleSignInIfNeeded() }
     }
 
-    var allTasks: [TaskModel] { getAllTasks() }
 
     func toggleNotifications(_ isOn: Bool) {
         toggleNotificationsUseCase.execute(isOn: isOn) { [weak self] granted, denied in

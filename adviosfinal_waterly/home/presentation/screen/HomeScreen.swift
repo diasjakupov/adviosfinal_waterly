@@ -15,10 +15,11 @@ struct HomeScreen: View {
     // Call-backs supplied by HomeViewController
     var onAddTask   : () -> Void
     var onSettings  : () -> Void
+    var onAnalytics : () -> Void
     
     // Local UI state
-    @State private var sheetHeight: CGFloat = 120
-    @State private var infoTask   : TaskUI?   = nil          // bottom-sheet
+    @State private var infoTask   : TaskUI?   = nil
+    @State private var calendarSheet: CalendarSheetState? = nil
     
     private let days: [DayStub] = {
         let cal = Calendar.current
@@ -33,9 +34,11 @@ struct HomeScreen: View {
     }()
     
     init(onAddTask: @escaping () -> Void,
-                onSettings: @escaping () -> Void) {
-        self.onAddTask  = onAddTask
-        self.onSettings = onSettings
+                onSettings: @escaping () -> Void,
+                onAnalytics: @escaping () -> Void) {
+        self.onAddTask   = onAddTask
+        self.onSettings  = onSettings
+        self.onAnalytics = onAnalytics
     }
     
     var body: some View {
@@ -55,32 +58,42 @@ struct HomeScreen: View {
     
     private var todayTab: some View {
         VStack(spacing: 32) {
-            
             Toolbar(selected: vm.tab,
-                    onSettingsClick: onSettings) { tab in
+                    onSettingsClick: onSettings,
+                    onAnalyticsClick: onAnalytics) { tab in
                 vm.switchTab(tab)
             }
             .padding(.horizontal)
             .padding(.top, 8)
-            
             
             // WaveGauge – tap to open task form
             WaveGauge(fraction: vm.doneFraction)
                 .frame(width: 260, height: 260)
                 .onTapGesture { onAddTask() }
             
+            // Show today's tasks directly, tap to show TaskInfoBottomSheet
+            TasksSection(tasks: vm.today.enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }) { t in
+                infoTask = t
+            }
+            
             Spacer()
-        }.overlay(bottomSheet)
+        }
     }
     
     private var calendarTab: some View {
         VStack(spacing: 16) {
             Toolbar(selected: vm.tab,
-                    onSettingsClick: onSettings) { vm.switchTab($0) }
+                    onSettingsClick: onSettings,
+                    onAnalyticsClick: onAnalytics) { vm.switchTab($0) }
                 .padding(.horizontal).padding(.top, 8)
             ScrollView {
                 LazyVStack(spacing: 16) {
-                    ForEach(vm.calendarDays) { day in CalendarCard(day: day) }
+                    ForEach(vm.calendarDays) { day in
+                        CalendarCard(day: day)
+                            .onTapGesture {
+                                calendarSheet = .date(day.date)
+                            }
+                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -88,19 +101,33 @@ struct HomeScreen: View {
             }
             Spacer()
         }
-    }
-    
-    @ViewBuilder private var bottomSheet: some View {
-        let uiToday = vm.today.enumerated()
-            .map { TaskModelMapper.toUi($0.element, index: $0.offset) }
-        
-        CustomBottomSheet(height: $sheetHeight) {
-            TodayTasksSection(tasks: uiToday) { t in
-                infoTask = t
+        .sheet(item: $calendarSheet) { sheet in
+            switch sheet {
+            case .date(let date):
+                let tasks = (vm.grouped[date] ?? []).enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(date.formatted(date: .long, time: .omitted))
+                        .font(.title2).bold().foregroundColor(.white)
+                        .padding(.top, 16)
+                        .padding(.horizontal)
+                    TasksSection(tasks: tasks) { t in
+                        calendarSheet = .task(t)
+                    }
+                }
+                .background(Color.wSurface)
+                .presentationDetents([.medium, .large])
+            case .task(let task):
+                TaskInfoBottomSheet(
+                    task: task,
+                    onDismiss: { calendarSheet = nil },
+                    onChangeStatus: { newStatus in
+                        vm.setStatus(of: task.id, to: newStatus)
+                    }
+                )
+                .presentationDetents([.medium])
             }
         }
     }
-
 }
 
 
@@ -118,14 +145,4 @@ private extension View {
             .presentationDetents([.medium])
         }
     }
-}
-
-
-struct HomeScreen_Previews: PreviewProvider {
-    static var previews: some View { HomeScreen {
-        
-    } onSettings: {
-        
-    }
-}
 }
