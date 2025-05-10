@@ -69,7 +69,7 @@ struct HomeScreen: View {
             
             switch vm.tab {
              case .today:     todayTab
-             case .calendar:  calendarTab          // ← NEW
+             case .calendar:  calendarTab
              }
             if let error = vm.error {
                 ErrorBanner(message: error)
@@ -85,10 +85,8 @@ struct HomeScreen: View {
             onEdit: { taskUI in
                 if let model = vm.findTaskModel(by: taskUI.id) {
                     infoTask = nil
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        editingTask = model
-                        showTaskForm = true
-                    }
+                    editingTask = model
+                    showTaskForm = true
                 }
             },
             onDelete: { taskUI in

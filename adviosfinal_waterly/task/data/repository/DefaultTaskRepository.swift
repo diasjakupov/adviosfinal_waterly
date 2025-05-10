@@ -24,32 +24,70 @@ final class DefaultTaskRepository: TaskRepository {
         self.ctx = ctx
     }
     
-    
+}
+
+// MARK: - Add
+extension DefaultTaskRepository {
     func add(_ task: TaskModel) async throws {
         try await ctx.perform {
-            let e = TaskEntity(context: self.ctx)
-            e.id        = task.id
-            e.title     = task.title
-            e.date      = task.date
-            e.startTime = task.startTime
-            e.endTime   = task.endTime
-            e.notes     = task.notes
-            e.category  = task.category
-            e.repeatRaw = task.repeatRule.rawValue
-            e.status    = task.status.rawValue
-            e.eventId   = task.eventId
-            if let eventIds = task.eventIds {
-                e.eventIds = eventIds as NSArray
-            } else {
-                e.eventIds = nil
-            }
-            try self.ctx.save()
+            let entity = TaskEntity(context: self.ctx)
+            self.apply(task, to: entity)
+            try self.saveContext()
         }
     }
-    
-    
+}
+
+// MARK: - Update
+extension DefaultTaskRepository {
+    func update(_ task: TaskModel) async throws {
+        try await ctx.perform {
+            guard let entity = try self.fetchEntity(by: task.id) else {
+                throw TaskRepositoryError.notFound
+            }
+            self.apply(task, to: entity)
+            try self.saveContext()
+        }
+    }
+    func updateStatus(id: UUID, to status: TaskStatus) async throws {
+        try await ctx.perform {
+            guard let entity = try self.fetchEntity(by: id) else {
+                throw TaskRepositoryError.notFound
+            }
+            entity.status = status.rawValue
+            try self.saveContext()
+            if status == .done {
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id.uuidString])
+            }
+        }
+    }
+}
+
+// MARK: - Delete
+extension DefaultTaskRepository {
+    func delete(_ task: TaskModel) async throws {
+        try await ctx.perform { [self] in
+            let request: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
+            if task.repeatRule == .none {
+                request.predicate = NSPredicate(format: "id == %@", task.id as CVarArg)
+            } else {
+                request.predicate = NSPredicate(format: "title == %@ AND repeatRaw == %@", task.title, task.repeatRule.rawValue)
+            }
+            let entities = try ctx.fetch(request)
+            guard !entities.isEmpty else {
+                throw TaskRepositoryError.notFound
+            }
+            for entity in entities {
+                ctx.delete(entity)
+            }
+            try self.saveContext()
+        }
+    }
+}
+
+// MARK: - Fetch
+extension DefaultTaskRepository {
     func categories() async throws -> [String] {
-        try await self.ctx.perform {
+        try await ctx.perform {
             let req = NSFetchRequest<NSFetchRequestResult>(entityName: "TaskEntity")
             req.resultType             = .dictionaryResultType
             req.propertiesToFetch      = ["category"]
@@ -63,81 +101,42 @@ final class DefaultTaskRepository: TaskRepository {
             return names
         }
     }
-    
-    func updateStatus(id: UUID, to s: TaskStatus) async throws {
-        try await ctx.perform { [self] in
-            let r: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
-            r.predicate = NSPredicate(format:"id == %@", id as CVarArg)
-            guard let obj = try ctx.fetch(r).first else {
-                throw TaskRepositoryError.notFound
-            }
-            obj.status = s.rawValue
-            do {
-                try ctx.save()
-            } catch {
-                throw TaskRepositoryError.saveFailed(error)
-            }
-            if s == .done {
-                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id.uuidString])
-            }
-        }
-    }
-    
-    func update(_ task: TaskModel) async throws {
-        try await ctx.perform { [self] in
-            let r: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
-            r.predicate = NSPredicate(format: "id == %@", task.id as CVarArg)
-            guard let obj = try ctx.fetch(r).first else {
-                throw TaskRepositoryError.notFound
-            }
-            obj.title     = task.title
-            obj.date      = task.date
-            obj.startTime = task.startTime
-            obj.endTime   = task.endTime
-            obj.notes     = task.notes
-            obj.category  = task.category
-            obj.repeatRaw = task.repeatRule.rawValue
-            obj.status    = task.status.rawValue
-            obj.eventId   = task.eventId
-            if let eventIds = task.eventIds {
-                obj.eventIds = eventIds as NSArray
-            } else {
-                obj.eventIds = nil
-            }
-            do {
-                try ctx.save()
-            } catch {
-                throw TaskRepositoryError.saveFailed(error)
-            }
-        }
-    }
-
-    func delete(_ task: TaskModel) async throws {
-        try await ctx.perform { [self] in
-            let r: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
-            if task.repeatRule == .none {
-                r.predicate = NSPredicate(format: "id == %@", task.id as CVarArg)
-            } else {
-                // For repeated tasks, delete all with the same title and repeat rule
-                r.predicate = NSPredicate(format: "title == %@ AND repeatRaw == %@", task.title, task.repeatRule.rawValue)
-            }
-            let objs = try ctx.fetch(r)
-            if objs.isEmpty {
-                throw TaskRepositoryError.notFound
-            }
-            for obj in objs {
-                ctx.delete(obj)
-            }
-            do {
-                try ctx.save()
-            } catch {
-                throw TaskRepositoryError.saveFailed(error)
-            }
-        }
-    }
-    
 }
 
+// MARK: - Mapping & Helpers
+private extension DefaultTaskRepository {
+    func fetchEntity(by id: UUID) throws -> TaskEntity? {
+        let request: NSFetchRequest<TaskEntity> = TaskEntity.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        return try ctx.fetch(request).first
+    }
+    func apply(_ task: TaskModel, to entity: TaskEntity) {
+        entity.id        = task.id
+        entity.title     = task.title
+        entity.date      = task.date
+        entity.startTime = task.startTime
+        entity.endTime   = task.endTime
+        entity.notes     = task.notes
+        entity.category  = task.category
+        entity.repeatRaw = task.repeatRule.rawValue
+        entity.status    = task.status.rawValue
+        entity.eventId   = task.eventId
+        if let eventIds = task.eventIds {
+            entity.eventIds = eventIds as NSArray
+        } else {
+            entity.eventIds = nil
+        }
+    }
+    func saveContext() throws {
+        do {
+            try ctx.save()
+        } catch {
+            throw TaskRepositoryError.saveFailed(error)
+        }
+    }
+}
+
+// MARK: - TaskModel Mapping
 extension TaskModel {
     init?(entity e: TaskEntity) {
         guard
