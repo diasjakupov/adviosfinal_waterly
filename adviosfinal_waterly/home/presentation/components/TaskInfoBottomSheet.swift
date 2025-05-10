@@ -11,15 +11,13 @@ import SwiftUI
 struct TaskInfoBottomSheet: View, Identifiable {
     var id: UUID { task.id }
     
-    // IN
     var task: TaskUI
     var onDismiss: () -> Void
-    var onChangeStatus: (TaskStatus) -> Void        // ← call back to VM
+    var onChangeStatus: (TaskStatus) -> Void
     var onEdit: ((TaskUI) -> Void)? = nil
     var onDelete: ((TaskUI) -> Void)? = nil
     var error: String? = nil
     
-    // LOCAL
     @State private var status: TaskStatus
     @State private var showDeleteConfirm = false
     

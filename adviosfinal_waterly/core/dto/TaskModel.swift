@@ -25,6 +25,6 @@ struct TaskModel {
     var category: String?
     var repeatRule: RepeatRule
     var status: TaskStatus  = .created
-    var eventId: String? = nil         // For single event
-    var eventIds: [String]? = nil      // For repeated events
+    var eventId: String? = nil
+    var eventIds: [String]? = nil      
 }

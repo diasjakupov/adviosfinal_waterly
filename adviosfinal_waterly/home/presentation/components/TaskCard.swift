@@ -9,15 +9,15 @@ import SwiftUI
 
 internal struct TasksSection: View {
     var tasks: [TaskUI]
-    var onTap: (TaskUI) -> Void           // pass tap up to HomeScreen
+    var onTap: (TaskUI) -> Void
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ScrollView {                                // ① scrolls
+            ScrollView {
                 LazyVStack(spacing: 12) {
                     ForEach(tasks) { t in
                         TaskCard(task: t)
-                            .onTapGesture { onTap(t) } // ② bubble tap
+                            .onTapGesture { onTap(t) } 
                     }
                 }
                 .padding(.bottom, 24)

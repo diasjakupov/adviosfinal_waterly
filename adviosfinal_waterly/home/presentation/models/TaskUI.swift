@@ -23,40 +23,35 @@ struct TaskUI: Identifiable {
 
 
 enum TaskModelMapper {
-    
-    /// Convert a domain model into the colourful UI model,
-    /// cycling through sample palettes by `index`.
-    static func toUi(_ m: TaskModel, index i: Int) -> TaskUI {
-        // sample palettes — same as Android version
+    static func toUi(_ model: TaskModel, index i: Int) -> TaskUI {
         let palettes: [(Color, Color, Color)] = [
-            (.init(red:0.85,green:0.80,blue:0.78), .init(red:0.24,green:0.15,blue:0.14), .init(red:0.36,green:0.25,blue:0.22)),
-            (.init(red:0.66,green:0.69,blue:0.70), .init(red:0.23,green:0.28,blue:0.28), .init(red:0.23,green:0.28,blue:0.28)),
-            (.init(red:0.78,green:0.90,blue:0.79), .init(red:0.11,green:0.37,blue:0.13), .init(red:0.18,green:0.49,blue:0.20)),
-            (.init(red:1.00,green:0.98,blue:0.77), .init(red:0.96,green:0.50,blue:0.09), .init(red:0.98,green:0.66,blue:0.15))
+            (.taskPalette1Bg, .taskPalette1Title, .taskPalette1Chip),
+            (.taskPalette2Bg, .taskPalette2Title, .taskPalette2Chip),
+            (.taskPalette3Bg, .taskPalette3Title, .taskPalette3Chip),
+            (.taskPalette4Bg, .taskPalette4Title, .taskPalette4Chip)
         ]
         let (bg, titleCol, chipCol) = palettes[i % palettes.count]
         
-        // time ⇢ string
         let tFmt = DateFormatter()
         tFmt.dateFormat = "HH:mm"
-        let s = tFmt.string(from: m.startTime)
-        let e = tFmt.string(from: m.endTime)
-        let dur = timeLabel(m.startTime, m.endTime)
+        let start = tFmt.string(from: model.startTime)
+        let end = tFmt.string(from: model.endTime)
+        let dur = timeLabel(model.startTime, model.endTime)
         
         return TaskUI(
-            id: m.id,
-            title: m.title,
-            start: s,
-            end: e,
+            id: model.id,
+            title: model.title,
+            start: start,
+            end: end,
             duration: dur,
             bg: bg,
             titleColor: titleCol,
             chipColor: chipCol,
-            status:m.status
+            status:model.status
         )
     }
     
-    // returns “1h 15m” etc.
+    // returns "1h 15m" etc.
     private static func timeLabel(_ start: Date, _ end: Date) -> String {
         let min = Int(end.timeIntervalSince(start) / 60)
         if min >= 60 {

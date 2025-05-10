@@ -9,15 +9,12 @@ import SwiftUI
 
 
 struct HomeScreen: View {
-    // View-model injected from UIKit host
     @EnvironmentObject private var vm: HomeViewModel
     
-    // Call-backs supplied by HomeViewController
     var onAddTask   : () -> Void
     var onSettings  : () -> Void
     var onAnalytics : () -> Void
     
-    // Local UI state
     @State private var infoTask   : TaskUI?   = nil
     @State private var calendarSheet: CalendarSheetState? = nil
     @Binding var editingTask: TaskModel?
@@ -133,12 +130,10 @@ struct HomeScreen: View {
             .padding(.horizontal)
             .padding(.top, 8)
             
-            // WaveGauge – tap to open task form
             WaveGauge(fraction: vm.doneFraction)
                 .frame(width: 260, height: 260)
                 .onTapGesture { onAddTask() }
             
-            // Show today's tasks directly, tap to show TaskInfoBottomSheet
             TasksSection(tasks: vm.today.enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }) { t in
                 infoTask = t
             }

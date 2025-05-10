@@ -17,4 +17,21 @@ extension Color {
     static let wGreyText = Color.white.opacity(0.65)
     static let wCard   = Color.wSurface
     static let wBadge  = Color.wBlue
+
+    // Task Palettes
+    static let taskPalette1Bg      = Color(red:0.85,green:0.80,blue:0.78)
+    static let taskPalette1Title   = Color(red:0.24,green:0.15,blue:0.14)
+    static let taskPalette1Chip    = Color(red:0.36,green:0.25,blue:0.22)
+
+    static let taskPalette2Bg      = Color(red:0.66,green:0.69,blue:0.70)
+    static let taskPalette2Title   = Color(red:0.23,green:0.28,blue:0.28)
+    static let taskPalette2Chip    = Color(red:0.23,green:0.28,blue:0.28)
+
+    static let taskPalette3Bg      = Color(red:0.78,green:0.90,blue:0.79)
+    static let taskPalette3Title   = Color(red:0.11,green:0.37,blue:0.13)
+    static let taskPalette3Chip    = Color(red:0.18,green:0.49,blue:0.20)
+
+    static let taskPalette4Bg      = Color(red:1.00,green:0.98,blue:0.77)
+    static let taskPalette4Title   = Color(red:0.96,green:0.50,blue:0.09)
+    static let taskPalette4Chip    = Color(red:0.98,green:0.66,blue:0.15)
 }

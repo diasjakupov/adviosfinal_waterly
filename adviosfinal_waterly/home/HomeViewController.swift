@@ -20,7 +20,6 @@ final class HomeViewController: UIViewController {
     private let taskRepository: DefaultTaskRepository
     private let settingsRepository: SettingsRepositoryImpl
     
-    // Use StateObject wrappers for SwiftUI state
     private var editingTaskBox = StateBox<TaskModel?>(wrappedValue: nil)
     private var showTaskFormBox = StateBox<Bool>(wrappedValue: false)
     
@@ -88,7 +87,6 @@ final class HomeViewController: UIViewController {
     }
 }
 
-// Helper class to bridge UIKit and SwiftUI @State
 final class StateBox<Value>: ObservableObject {
     @Published var wrappedValue: Value
     var binding: Binding<Value> { Binding(get: { self.wrappedValue }, set: { self.wrappedValue = $0 }) }

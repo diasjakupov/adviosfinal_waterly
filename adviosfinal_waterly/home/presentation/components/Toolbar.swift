@@ -11,7 +11,7 @@ struct Toolbar: View {
     var selected: TimeTab
     var onSettingsClick: () -> Void
     var onAnalyticsClick: () -> Void
-    var onTabSelect: (TimeTab) -> Void      // callback
+    var onTabSelect: (TimeTab) -> Void      
     
     var body: some View {
         HStack(spacing: 12) {
