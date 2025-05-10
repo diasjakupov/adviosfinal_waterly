@@ -13,6 +13,11 @@ protocol SettingsRepository {
     func restorePreviousSignIn() async -> String?
     func currentUserEmail() -> String?
     func disconnectGoogleCalendar()
-    func syncAllTasksToGoogleCalendar(tasks: [TaskModel]) async throws
+    func syncAllTasksToGoogleCalendar(tasks: [TaskModel]) async throws -> [UUID: String]
     func toggleNotifications(_ isOn: Bool, completion: @escaping (Bool, Bool) -> Void)
+}
+
+protocol GoogleCalendarRepository {
+    func updateTask(_ task: TaskModel) async throws
+    func deleteTask(_ task: TaskModel) async throws
 } 

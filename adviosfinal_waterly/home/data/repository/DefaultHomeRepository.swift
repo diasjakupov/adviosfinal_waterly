@@ -85,26 +85,3 @@ final class DefaultHomeRepository: HomeRepository {
         }
     }
 }
-
-
-private extension TaskModel {
-    init?(entity e: TaskEntity) {
-        guard
-            let title = e.title,
-            let date  = e.date,
-            let start = e.startTime,
-            let end   = e.endTime
-        else { return nil }
-        
-        self.init(title: title,
-                  date:  date,
-                  startTime: start,
-                  endTime:   end,
-                  notes: e.notes ?? "",
-                  category: e.category,
-                  repeatRule: RepeatRule(rawValue: e.repeatRaw ?? "") ?? .none,
-                  status: TaskStatus(rawValue: e.status ?? "") ?? .created
-        )
-        self.id = e.id ?? UUID()
-    }
-}

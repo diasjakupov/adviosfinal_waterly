@@ -72,13 +72,10 @@ struct SettingsScreen: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
             }
-            .alert("Google Auth Error", isPresented: Binding(
-                get: { vm.googleAuthError != nil },
-                set: { _ in vm.googleAuthError = nil }
-            )) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text(vm.googleAuthError ?? "")
+            if let error = vm.googleAuthError {
+                ErrorBanner(message: error)
+            } else if !vm.syncStatus.isEmpty && vm.syncStatus.lowercased().contains("fail") {
+                ErrorBanner(message: vm.syncStatus)
             }
         }
         .toolbar {

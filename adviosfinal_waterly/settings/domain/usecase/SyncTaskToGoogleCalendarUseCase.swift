@@ -13,7 +13,7 @@ final class SyncTaskToGoogleCalendarUseCase {
         self.repository = repository
     }
 
-    func execute(task: TaskModel) async throws {
+    func execute(task: TaskModel) async throws -> [UUID: String] {
         try await repository.syncAllTasksToGoogleCalendar(tasks: [task])
     }
 } 

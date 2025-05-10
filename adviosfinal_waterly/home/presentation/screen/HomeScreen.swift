@@ -20,6 +20,14 @@ struct HomeScreen: View {
     // Local UI state
     @State private var infoTask   : TaskUI?   = nil
     @State private var calendarSheet: CalendarSheetState? = nil
+    @Binding var editingTask: TaskModel?
+    @Binding var showTaskForm: Bool
+    let updateTaskUseCase: UpdateTaskUseCase
+    let addTaskUseCase: AddTaskUseCase
+    let getCategoriesUseCase: GetCategoriesUseCase
+    let syncTaskToGoogleCalendarUseCase: SyncTaskToGoogleCalendarUseCase
+    let restoreSignInUseCase: RestoreGoogleSignInUseCase
+    @State private var infoTaskError: String? = nil
     
     private let days: [DayStub] = {
         let cal = Calendar.current
@@ -35,10 +43,24 @@ struct HomeScreen: View {
     
     init(onAddTask: @escaping () -> Void,
                 onSettings: @escaping () -> Void,
-                onAnalytics: @escaping () -> Void) {
+                onAnalytics: @escaping () -> Void,
+                editingTask: Binding<TaskModel?>,
+                showTaskForm: Binding<Bool>,
+                updateTaskUseCase: UpdateTaskUseCase,
+                addTaskUseCase: AddTaskUseCase,
+                getCategoriesUseCase: GetCategoriesUseCase,
+                syncTaskToGoogleCalendarUseCase: SyncTaskToGoogleCalendarUseCase,
+                restoreSignInUseCase: RestoreGoogleSignInUseCase) {
         self.onAddTask   = onAddTask
         self.onSettings  = onSettings
         self.onAnalytics = onAnalytics
+        self._editingTask = editingTask
+        self._showTaskForm = showTaskForm
+        self.updateTaskUseCase = updateTaskUseCase
+        self.addTaskUseCase = addTaskUseCase
+        self.getCategoriesUseCase = getCategoriesUseCase
+        self.syncTaskToGoogleCalendarUseCase = syncTaskToGoogleCalendarUseCase
+        self.restoreSignInUseCase = restoreSignInUseCase
     }
     
     var body: some View {
@@ -49,10 +71,57 @@ struct HomeScreen: View {
              case .today:     todayTab
              case .calendar:  calendarTab          // ← NEW
              }
+            if let error = vm.error {
+                ErrorBanner(message: error)
+            }
         }
         .preferredColorScheme(.dark)
-        .sheetTaskInfo(task: $infoTask){ task, status in
-            vm.setStatus(of: task.id, to: status)
+        .sheetTaskInfo(
+            task: $infoTask,
+            error: $infoTaskError,
+            onChangeStatus: { task, status in
+                vm.setStatus(of: task.id, to: status)
+            },
+            onEdit: { taskUI in
+                if let model = vm.findTaskModel(by: taskUI.id) {
+                    infoTask = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        editingTask = model
+                        showTaskForm = true
+                    }
+                }
+            },
+            onDelete: { taskUI in
+                if let model = vm.findTaskModel(by: taskUI.id) {
+                    Task {
+                        do {
+                            try await vm.deleteTask(model)
+                            infoTask = nil
+                            editingTask = nil
+                            showTaskForm = false
+                        } catch {
+                            infoTaskError = error.localizedDescription
+                        }
+                    }
+                }
+            }
+        )
+        .sheet(isPresented: $showTaskForm) {
+            if let editingTask = editingTask {
+                TaskFormScreen(onClose: {
+                    showTaskForm = false
+                }, editingTask: editingTask)
+                    .environmentObject(
+                        TaskFormViewModel(
+                            addTaskUseCase: addTaskUseCase,
+                            getCategoriesUseCase: getCategoriesUseCase,
+                            syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
+                            restoreGoogleSignInUseCase: restoreSignInUseCase,
+                            updateTaskUseCase: updateTaskUseCase,
+                            editingTask: editingTask
+                        )
+                    )
+            }
         }
     }
     
@@ -133,16 +202,24 @@ struct HomeScreen: View {
 
 private extension View {
     @ViewBuilder
-    func sheetTaskInfo(task: Binding<TaskUI?>, onChangeStatus: @escaping (TaskUI, TaskStatus) -> Void) -> some View {
+    func sheetTaskInfo(
+        task: Binding<TaskUI?>,
+        error: Binding<String?> = .constant(nil),
+        onChangeStatus: @escaping (TaskUI, TaskStatus) -> Void,
+        onEdit: @escaping (TaskUI) -> Void,
+        onDelete: @escaping (TaskUI) -> Void
+    ) -> some View {
         self.sheet(item: task) { t in
             TaskInfoBottomSheet(
                 task: t,
                 onDismiss: { task.wrappedValue = nil },
-                onChangeStatus: { newStatus in
-                    onChangeStatus(t, newStatus)
-                }
+                onChangeStatus: { newStatus in onChangeStatus(t, newStatus) },
+                onEdit: onEdit,
+                onDelete: onDelete,
+                error: error.wrappedValue
             )
             .presentationDetents([.medium])
         }
     }
 }
+

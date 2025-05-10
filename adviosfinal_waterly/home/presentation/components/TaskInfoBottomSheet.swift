@@ -15,17 +15,26 @@ struct TaskInfoBottomSheet: View, Identifiable {
     var task: TaskUI
     var onDismiss: () -> Void
     var onChangeStatus: (TaskStatus) -> Void        // ← call back to VM
+    var onEdit: ((TaskUI) -> Void)? = nil
+    var onDelete: ((TaskUI) -> Void)? = nil
+    var error: String? = nil
     
     // LOCAL
     @State private var status: TaskStatus
+    @State private var showDeleteConfirm = false
     
     init(task: TaskUI,
          onDismiss: @escaping () -> Void,
-         onChangeStatus: @escaping (TaskStatus) -> Void)
-    {
+         onChangeStatus: @escaping (TaskStatus) -> Void,
+         onEdit: ((TaskUI) -> Void)? = nil,
+         onDelete: ((TaskUI) -> Void)? = nil,
+         error: String? = nil) {
         self.task = task
         self.onDismiss = onDismiss
         self.onChangeStatus = onChangeStatus
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        self.error = error
         _status = State(initialValue: task.status)
     }
     
@@ -61,6 +70,27 @@ struct TaskInfoBottomSheet: View, Identifiable {
             .padding(.horizontal)
             .onChange(of: status) { onChangeStatus($0) }
             
+            HStack(spacing: 16) {
+                Button("Edit") {
+                    onEdit?(task)
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth:.infinity)
+                .padding()
+                .background(Color.orange)
+                .cornerRadius(12)
+                Button("Delete") {
+                    showDeleteConfirm = true
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth:.infinity)
+                .padding()
+                .background(Color.red)
+                .cornerRadius(12)
+            }
+            
             Spacer()
             
             Button("Close") { onDismiss() }
@@ -72,10 +102,23 @@ struct TaskInfoBottomSheet: View, Identifiable {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.bottom, 24)
+            if let error = error {
+                ErrorBanner(message: error)
+            }
         }
         .padding(.horizontal)
         .background(Color.wSurface)
         .ignoresSafeArea(.container, edges: .bottom)
+        .alert(isPresented: $showDeleteConfirm) {
+            Alert(
+                title: Text("Delete Task?"),
+                message: Text("Are you sure you want to delete this task? This cannot be undone."),
+                primaryButton: .destructive(Text("Delete")) {
+                    onDelete?(task)
+                },
+                secondaryButton: .cancel()
+            )
+        }
     }
     
     /* small helper */

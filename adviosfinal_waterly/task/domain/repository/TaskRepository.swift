@@ -13,4 +13,6 @@ protocol TaskRepository {
     func add(_ task: TaskModel) async throws
     func categories() async throws -> [String]
     func updateStatus(id: UUID, to status: TaskStatus) async throws
+    func update(_ task: TaskModel) async throws
+    func delete(_ task: TaskModel) async throws
 }

@@ -22,11 +22,13 @@ final class TaskFormViewController: UIViewController {
         let settingsRepository = SettingsRepositoryImpl()
         let syncTaskToGoogleCalendarUseCase = SyncTaskToGoogleCalendarUseCase(repository: settingsRepository)
         let restoreSignInUseCase = RestoreGoogleSignInUseCase(repository: settingsRepository)
+        let updateTaskUseCase = UpdateTaskUseCase(repository: repository, googleRepository: settingsRepository)
         let vm = TaskFormViewModel(
             addTaskUseCase: addTaskUseCase,
             getCategoriesUseCase: getCategoriesUseCase,
             syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
-            restoreGoogleSignInUseCase: restoreSignInUseCase
+            restoreGoogleSignInUseCase: restoreSignInUseCase,
+            updateTaskUseCase: updateTaskUseCase
         )
         let host = UIHostingController(
             rootView: NavigationStack {

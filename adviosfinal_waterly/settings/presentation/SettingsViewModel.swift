@@ -61,7 +61,8 @@ final class SettingsViewModel: ObservableObject {
         } catch {
             self.isGoogleConnected = false
             self.googleUserEmail = nil
-            self.googleAuthError = error.localizedDescription
+            let userMessage = error.localizedDescription.isEmpty ? "Failed to connect to Google Calendar. Please try again or check your connection." : error.localizedDescription
+            self.googleAuthError = userMessage
         }
     }
 
@@ -76,7 +77,8 @@ final class SettingsViewModel: ObservableObject {
             try await syncTasksToGoogleCalendarUseCase.execute(tasks: allTasks)
             self.syncStatus = "All tasks synced to Google Calendar!"
         } catch {
-            self.syncStatus = "Sync failed: \(error.localizedDescription)"
+            let userMessage = error.localizedDescription.isEmpty ? "Sync failed. Please check your connection or re-authenticate." : error.localizedDescription
+            self.syncStatus = userMessage
         }
     }
 

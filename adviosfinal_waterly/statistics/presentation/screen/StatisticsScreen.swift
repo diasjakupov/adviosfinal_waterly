@@ -79,6 +79,9 @@ struct StatisticsScreen: View {
                 }
                 Spacer()
             }
+            if let error = vm.error {
+                ErrorBanner(message: error)
+            }
         }
         .onAppear { vm.load() }
     }
@@ -103,3 +106,4 @@ struct DonutChart: View {
         }
     }
 }
+

@@ -34,7 +34,7 @@ final class SettingsRepositoryImpl: SettingsRepository {
         googleDataSource.signOut()
     }
     
-    func syncAllTasksToGoogleCalendar(tasks: [TaskModel]) async throws {
+    func syncAllTasksToGoogleCalendar(tasks: [TaskModel]) async throws -> [UUID: String] {
         try await googleDataSource.addTasksToCalendar(tasks: tasks)
     }
     
@@ -48,5 +48,14 @@ final class SettingsRepositoryImpl: SettingsRepository {
         } else {
             completion(false, false)
         }
+    }
+}
+
+extension SettingsRepositoryImpl: GoogleCalendarRepository {
+    func updateTask(_ task: TaskModel) async throws {
+        try await googleDataSource.updateTask(task)
+    }
+    func deleteTask(_ task: TaskModel) async throws {
+        try await googleDataSource.deleteTask(task)
     }
 } 

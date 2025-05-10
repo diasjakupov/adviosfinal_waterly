@@ -11,6 +11,7 @@ import SwiftUI
 @MainActor
 class StatisticsViewModel: ObservableObject {
     @Published var statistics: StatisticsModel? = nil
+    @Published var error: String? = nil
     private let getStatisticsUseCase: GetStatisticsUseCase
     
     init(getStatisticsUseCase: GetStatisticsUseCase) {
@@ -19,7 +20,12 @@ class StatisticsViewModel: ObservableObject {
     
     func load() {
         Task {
-            self.statistics = try? await getStatisticsUseCase.execute()
+            do {
+                self.statistics = try await getStatisticsUseCase.execute()
+                self.error = nil
+            } catch {
+                self.error = error.localizedDescription.isEmpty ? "Failed to load statistics. Please try again." : error.localizedDescription
+            }
         }
     }
 } 

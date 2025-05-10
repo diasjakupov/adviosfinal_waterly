@@ -11,14 +11,35 @@ import SwiftUI
 
 final class HomeViewController: UIViewController {
     private let vm: HomeViewModel
+    private let deleteTaskUseCase: DeleteTaskUseCase
+    private let updateTaskUseCase: UpdateTaskUseCase
+    private let addTaskUseCase: AddTaskUseCase
+    private let getCategoriesUseCase: GetCategoriesUseCase
+    private let syncTaskToGoogleCalendarUseCase: SyncTaskToGoogleCalendarUseCase
+    private let restoreSignInUseCase: RestoreGoogleSignInUseCase
+    private let taskRepository: DefaultTaskRepository
+    private let settingsRepository: SettingsRepositoryImpl
+    
+    // Use StateObject wrappers for SwiftUI state
+    private var editingTaskBox = StateBox<TaskModel?>(wrappedValue: nil)
+    private var showTaskFormBox = StateBox<Bool>(wrappedValue: false)
     
     init() {
         let repository = DefaultHomeRepository()
         let getTaskStreamUseCase = GetTaskStreamUseCase(repository: repository)
         let updateTaskStatusUseCase = UpdateHomeTaskStatusUseCase(repository: repository)
+        self.taskRepository = DefaultTaskRepository()
+        self.settingsRepository = SettingsRepositoryImpl()
+        self.deleteTaskUseCase = DeleteTaskUseCase(repository: taskRepository, googleRepository: settingsRepository)
+        self.updateTaskUseCase = UpdateTaskUseCase(repository: taskRepository, googleRepository: settingsRepository)
+        self.addTaskUseCase = AddTaskUseCase(repository: taskRepository)
+        self.getCategoriesUseCase = GetCategoriesUseCase(repository: taskRepository)
+        self.syncTaskToGoogleCalendarUseCase = SyncTaskToGoogleCalendarUseCase(repository: settingsRepository)
+        self.restoreSignInUseCase = RestoreGoogleSignInUseCase(repository: settingsRepository)
         self.vm = HomeViewModel(
             getTaskStreamUseCase: getTaskStreamUseCase,
-            updateTaskStatusUseCase: updateTaskStatusUseCase
+            updateTaskStatusUseCase: updateTaskStatusUseCase,
+            deleteTaskUseCase: deleteTaskUseCase
         )
         super.init(nibName: nil, bundle: nil)
     }
@@ -33,7 +54,14 @@ final class HomeViewController: UIViewController {
             rootView: HomeScreen(
                 onAddTask: { [weak self] in self?.gotoForm() },
                 onSettings: { [weak self] in self?.showSettings() },
-                onAnalytics: { [weak self] in self?.showStatistics() }
+                onAnalytics: { [weak self] in self?.showStatistics() },
+                editingTask: editingTaskBox.binding,
+                showTaskForm: showTaskFormBox.binding,
+                updateTaskUseCase: updateTaskUseCase,
+                addTaskUseCase: addTaskUseCase,
+                getCategoriesUseCase: getCategoriesUseCase,
+                syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
+                restoreSignInUseCase: restoreSignInUseCase
             )
             .environmentObject(vm)
         )
@@ -58,4 +86,11 @@ final class HomeViewController: UIViewController {
         let vc = StatisticsViewController()
         navigationController?.pushViewController(vc, animated: true)
     }
+}
+
+// Helper class to bridge UIKit and SwiftUI @State
+final class StateBox<Value>: ObservableObject {
+    @Published var wrappedValue: Value
+    var binding: Binding<Value> { Binding(get: { self.wrappedValue }, set: { self.wrappedValue = $0 }) }
+    init(wrappedValue: Value) { self.wrappedValue = wrappedValue }
 }
