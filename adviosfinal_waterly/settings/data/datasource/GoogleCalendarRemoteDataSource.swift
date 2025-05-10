@@ -62,69 +62,74 @@ final class GoogleCalendarRemoteDataSource {
         }
         let accessToken = user.accessToken.tokenString
         let calendarId = "primary"
-        let url = URL(string: "https://www.googleapis.com/calendar/v3/calendars/\(calendarId)/events")!
+        let url = URL(string: "https://www.googleapis.com/calendar/v3/calendars/\(calendarId)/events")
+        
         print("[GoogleCalendarRemoteDataSource] Syncing \(tasks.count) task(s) to Google Calendar...")
-        for task in tasks {
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for task in tasks {
+                group.addTask {
+                    var request = URLRequest(url: url)
+                    request.httpMethod = "POST"
+                    request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            // Combine task.date with startTime/endTime components if needed
-            let calendar = Calendar.current
-            let startDateTime = calendar.date(
-                bySettingHour: calendar.component(.hour, from: task.startTime),
-                minute: calendar.component(.minute, from: task.startTime),
-                second: calendar.component(.second, from: task.startTime),
-                of: task.date
-            ) ?? task.startTime
-            let endDateTime = calendar.date(
-                bySettingHour: calendar.component(.hour, from: task.endTime),
-                minute: calendar.component(.minute, from: task.endTime),
-                second: calendar.component(.second, from: task.endTime),
-                of: task.date
-            ) ?? task.endTime
+                    let calendar = Calendar.current
+                    let startDateTime = calendar.date(
+                        bySettingHour: calendar.component(.hour, from: task.startTime),
+                        minute: calendar.component(.minute, from: task.startTime),
+                        second: calendar.component(.second, from: task.startTime),
+                        of: task.date
+                    ) ?? task.startTime
+                    let endDateTime = calendar.date(
+                        bySettingHour: calendar.component(.hour, from: task.endTime),
+                        minute: calendar.component(.minute, from: task.endTime),
+                        second: calendar.component(.second, from: task.endTime),
+                        of: task.date
+                    ) ?? task.endTime
 
-            var event: [String: Any] = [
-                "summary": task.title,
-                "description": task.notes,
-                "start": [
-                    "dateTime": ISO8601DateFormatter().string(from: startDateTime),
-                    "timeZone": TimeZone.current.identifier
-                ],
-                "end": [
-                    "dateTime": ISO8601DateFormatter().string(from: endDateTime),
-                    "timeZone": TimeZone.current.identifier
-                ]
-            ]
-            // Add recurrence rule if needed
-            switch task.repeatRule {
-            case .daily:
-                event["recurrence"] = ["RRULE:FREQ=DAILY"]
-            case .weekly:
-                event["recurrence"] = ["RRULE:FREQ=WEEKLY"]
-            default:
-                break
-            }
-            if let bodyData = try? JSONSerialization.data(withJSONObject: event), let bodyString = String(data: bodyData, encoding: .utf8) {
-                print("[GoogleCalendarRemoteDataSource] Event data: \(bodyString)")
-            }
-            let bodyData = try? JSONSerialization.data(withJSONObject: event)
-            request.httpBody = bodyData
-            do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-                if let httpResponse = response as? HTTPURLResponse {
-                    print("[GoogleCalendarRemoteDataSource] Response status: \(httpResponse.statusCode)")
-                    if !(200...299).contains(httpResponse.statusCode) {
-                        let responseString = String(data: data, encoding: .utf8) ?? "<no response body>"
-                        print("[GoogleCalendarRemoteDataSource] Error response body: \(responseString)")
-                        throw NSError(domain: "Google Calendar API error", code: httpResponse.statusCode, userInfo: ["response": responseString])
+                    var event: [String: Any] = [
+                        "summary": task.title,
+                        "description": task.notes,
+                        "start": [
+                            "dateTime": ISO8601DateFormatter().string(from: startDateTime),
+                            "timeZone": TimeZone.current.identifier
+                        ],
+                        "end": [
+                            "dateTime": ISO8601DateFormatter().string(from: endDateTime),
+                            "timeZone": TimeZone.current.identifier
+                        ]
+                    ]
+                    switch task.repeatRule {
+                    case .daily:
+                        event["recurrence"] = ["RRULE:FREQ=DAILY"]
+                    case .weekly:
+                        event["recurrence"] = ["RRULE:FREQ=WEEKLY"]
+                    default:
+                        break
+                    }
+                    if let bodyData = try? JSONSerialization.data(withJSONObject: event), let bodyString = String(data: bodyData, encoding: .utf8) {
+                        print("[GoogleCalendarRemoteDataSource] Event data: \(bodyString)")
+                    }
+                    let bodyData = try? JSONSerialization.data(withJSONObject: event)
+                    request.httpBody = bodyData
+                    do {
+                        let (data, response) = try await URLSession.shared.data(for: request)
+                        if let httpResponse = response as? HTTPURLResponse {
+                            print("[GoogleCalendarRemoteDataSource] Response status: \(httpResponse.statusCode)")
+                            if !(200...299).contains(httpResponse.statusCode) {
+                                let responseString = String(data: data, encoding: .utf8) ?? "<no response body>"
+                                print("[GoogleCalendarRemoteDataSource] Error response body: \(responseString)")
+                                throw NSError(domain: "Google Calendar API error", code: httpResponse.statusCode, userInfo: ["response": responseString])
+                            }
+                        }
+                    } catch {
+                        print("[GoogleCalendarRemoteDataSource] Network or serialization error: \(error)")
+                        throw error
                     }
                 }
-            } catch {
-                print("[GoogleCalendarRemoteDataSource] Network or serialization error: \(error)")
-                throw error
             }
+            try await group.waitForAll()
         }
     }
 } 
