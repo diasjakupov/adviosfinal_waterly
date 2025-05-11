@@ -1,0 +1,61 @@
+# Xcode
+DerivedData/
+build/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+
+# SwiftPM
+.swiftpm/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/
+Carthage.build/
+
+# User/Local
+*.DS_Store
+*.swp
+*.swo
+*.orig
+*.lock
+*.log
+*.tmp
+.env
+.env.*
+.idea/
+.vscode/
+.history/
+.Trash/
+
+# CoreData runtime files
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Google/Secrets
+GoogleService-Info.plist
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Archives
+*.xcresult
+*.xcarchive
+
+# Misc
+*.moved-aside
+*.xcuserdatad
+
+# Uncomment if you use SPM checkouts
+# .build/ 
