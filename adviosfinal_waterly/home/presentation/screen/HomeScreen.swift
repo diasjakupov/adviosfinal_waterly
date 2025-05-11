@@ -14,16 +14,10 @@ struct HomeScreen: View {
     var onAddTask   : () -> Void
     var onSettings  : () -> Void
     var onAnalytics : () -> Void
+    var onEditTask  : (TaskModel) -> Void
     
     @State private var infoTask   : TaskUI?   = nil
     @State private var calendarSheet: CalendarSheetState? = nil
-    @Binding var editingTask: TaskModel?
-    @Binding var showTaskForm: Bool
-    let updateTaskUseCase: UpdateTaskUseCase
-    let addTaskUseCase: AddTaskUseCase
-    let getCategoriesUseCase: GetCategoriesUseCase
-    let syncTaskToGoogleCalendarUseCase: SyncTaskToGoogleCalendarUseCase
-    let restoreSignInUseCase: RestoreGoogleSignInUseCase
     @State private var infoTaskError: String? = nil
     
     private let days: [DayStub] = {
@@ -39,25 +33,13 @@ struct HomeScreen: View {
     }()
     
     init(onAddTask: @escaping () -> Void,
-                onSettings: @escaping () -> Void,
-                onAnalytics: @escaping () -> Void,
-                editingTask: Binding<TaskModel?>,
-                showTaskForm: Binding<Bool>,
-                updateTaskUseCase: UpdateTaskUseCase,
-                addTaskUseCase: AddTaskUseCase,
-                getCategoriesUseCase: GetCategoriesUseCase,
-                syncTaskToGoogleCalendarUseCase: SyncTaskToGoogleCalendarUseCase,
-                restoreSignInUseCase: RestoreGoogleSignInUseCase) {
+        onSettings: @escaping () -> Void,
+        onAnalytics: @escaping () -> Void,
+        onEditTask: @escaping (TaskModel) -> Void) {
         self.onAddTask   = onAddTask
         self.onSettings  = onSettings
         self.onAnalytics = onAnalytics
-        self._editingTask = editingTask
-        self._showTaskForm = showTaskForm
-        self.updateTaskUseCase = updateTaskUseCase
-        self.addTaskUseCase = addTaskUseCase
-        self.getCategoriesUseCase = getCategoriesUseCase
-        self.syncTaskToGoogleCalendarUseCase = syncTaskToGoogleCalendarUseCase
-        self.restoreSignInUseCase = restoreSignInUseCase
+        self.onEditTask  = onEditTask
     }
     
     var body: some View {
@@ -82,8 +64,7 @@ struct HomeScreen: View {
             onEdit: { taskUI in
                 if let model = vm.findTaskModel(by: taskUI.id) {
                     infoTask = nil
-                    editingTask = model
-                    showTaskForm = true
+                    onEditTask(model)
                 }
             },
             onDelete: { taskUI in
@@ -92,8 +73,6 @@ struct HomeScreen: View {
                         do {
                             try await vm.deleteTask(model)
                             infoTask = nil
-                            editingTask = nil
-                            showTaskForm = false
                         } catch {
                             infoTaskError = error.localizedDescription
                         }
@@ -101,23 +80,6 @@ struct HomeScreen: View {
                 }
             }
         )
-        .sheet(isPresented: $showTaskForm) {
-            if let editingTask = editingTask {
-                TaskFormScreen(onClose: {
-                    showTaskForm = false
-                }, editingTask: editingTask)
-                    .environmentObject(
-                        TaskFormViewModel(
-                            addTaskUseCase: addTaskUseCase,
-                            getCategoriesUseCase: getCategoriesUseCase,
-                            syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
-                            restoreGoogleSignInUseCase: restoreSignInUseCase,
-                            updateTaskUseCase: updateTaskUseCase,
-                            editingTask: editingTask
-                        )
-                    )
-            }
-        }
     }
     
     private var todayTab: some View {

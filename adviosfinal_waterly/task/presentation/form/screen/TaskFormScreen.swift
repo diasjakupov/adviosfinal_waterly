@@ -9,7 +9,6 @@
 import SwiftUI
 
 struct TaskFormScreen: View {
-    // Callback for closing the form
     var onClose: () -> Void
     var editingTask: TaskModel? = nil
     
@@ -55,11 +54,6 @@ struct TaskFormScreen: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onChange(of: vm.saved) { saved in
-            if saved { onClose() }
-        }
-        
-        /* sheets / dialogs */
         .sheet(isPresented: $showDatePicker)  { datePickerSheet }
         .sheet(isPresented: $showStartPicker) { timePickerSheet($vm.start) }
         .sheet(isPresented: $showEndPicker)   { timePickerSheet($vm.end) }
@@ -170,7 +164,12 @@ struct TaskFormScreen: View {
     }
     
     private var saveButton: some View {
-        Button { vm.save() } label: {
+        Button {
+            vm.save()
+            if vm.error == nil{
+                onClose()
+            }
+        } label: {
             Text(vm.isEditing ? "UPDATE" : "SAVE")
                 .bold()
                 .foregroundColor(.white)

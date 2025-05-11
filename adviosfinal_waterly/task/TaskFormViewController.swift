@@ -12,6 +12,11 @@ import Combine
 final class TaskFormViewController: UIViewController {
     
     private var cancellables = Set<AnyCancellable>()
+    private var editingTask: TaskModel? = nil
+    
+    func setEditingTask(_ task: TaskModel) {
+        self.editingTask = task
+    }
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -28,13 +33,14 @@ final class TaskFormViewController: UIViewController {
             getCategoriesUseCase: getCategoriesUseCase,
             syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
             restoreGoogleSignInUseCase: restoreSignInUseCase,
-            updateTaskUseCase: updateTaskUseCase
+            updateTaskUseCase: updateTaskUseCase,
+            editingTask: editingTask
         )
         let host = UIHostingController(
             rootView: NavigationStack {
                 TaskFormScreen(onClose: { [weak self] in
                     self?.navigationController?.popViewController(animated: true)
-                })
+                }, editingTask: editingTask)
                 .environmentObject(vm)
             }
         )
@@ -43,14 +49,7 @@ final class TaskFormViewController: UIViewController {
         host.view.frame = view.bounds
         host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         host.didMove(toParent: self)
-        
-        // close after save
-        vm.$saved
-            .filter { $0 }
-            .sink { [weak self] _ in
-                self?.navigationController?.popViewController(animated: true)
-            }
-            .store(in: &cancellables)
+    
     }
     
     @objc private func didTapBack() {

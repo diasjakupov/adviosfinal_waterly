@@ -22,7 +22,6 @@ final class TaskFormViewModel: ObservableObject {
     
     @Published var categories: [String] = []
     @Published var selected: String? = nil
-    @Published var saved = false
     @Published var error: String?
     
     // MARK: - Dependencies
@@ -83,43 +82,68 @@ final class TaskFormViewModel: ObservableObject {
             return
         }
         Task {
+            let task = makeTaskModel()
+            print("[TaskFormViewModel] TaskModel created: \(task)")
+                
+            try await restoreGoogleSignInUseCase.execute()
+            print("[TaskFormViewModel] Google sign-in restored")
+                
             do {
-                let task = makeTaskModel()
-                print("[TaskFormViewModel] TaskModel created: \(task)")
-                if isEditing, let updateTaskUseCase = updateTaskUseCase {
-                    print("[TaskFormViewModel] Editing existing task, updating...")
-                    try await updateTaskUseCase.execute(task)
+                if isEditing {
+                    try await updateExistingTask(task)
                 } else {
-                    print("[TaskFormViewModel] Adding new task...")
-                    try await addTaskUseCase.execute(task)
-                    scheduleNotification(for: task)
-                    print("[TaskFormViewModel] Notification scheduled for task: \(task.title)")
-                    if let syncUseCase = syncTaskToGoogleCalendarUseCase {
-                        print("[TaskFormViewModel] Attempting to sync task to Google Calendar: \(task.title)")
-                        do {
-                            try await restoreGoogleSignInUseCase.execute()
-                            print("[TaskFormViewModel] Google sign-in restored")
-                            let eventIdMap = try await syncUseCase.execute(task: task)
-                            print("[TaskFormViewModel] eventIdMap from sync: \(eventIdMap)")
-                            try await updateTaskWithEventIds(task: task, eventIdMap: eventIdMap)
-                        } catch {
-                            let syncErrorMsg = error.localizedDescription.isEmpty ? "Failed to sync task to Google Calendar. Please check your connection or re-authenticate." : error.localizedDescription
-                            self.error = syncErrorMsg
-                            print("[TaskFormViewModel] Failed to sync task to Google Calendar: \(syncErrorMsg)")
-                        }
-                    } else {
-                        print("[TaskFormViewModel] Skipping Google Calendar sync (syncUseCase or updateTaskUseCase is nil)")
-                    }
+                    try await addNewTask(task)
                 }
-                saved = true
-                self.error = nil
-                print("[TaskFormViewModel] Task save complete")
             } catch {
-                self.error = error.localizedDescription.isEmpty ? "Failed to save task. Please try again." : error.localizedDescription
-                print("[TaskFormViewModel] Error in save(): \(self.error ?? "Unknown error")")
+                self.error = error.localizedDescription
+                print("[TaskFormViewModel] Error while saving task: \(error.localizedDescription)")
             }
+
+            self.error = nil
+            print("[TaskFormViewModel] Task save complete")
         }
     }
+    
+    private func updateExistingTask(_ task: TaskModel) async throws {
+        guard let updateTaskUseCase = updateTaskUseCase else {
+            print("[TaskFormViewModel] updateTaskUseCase is nil.")
+            return
+        }
+        print("[TaskFormViewModel] Editing existing task, updating...")
+        try await updateTaskUseCase.execute(task)
+    }
+
+    private func addNewTask(_ task: TaskModel) async throws {
+        print("[TaskFormViewModel] Adding new task...")
+        try await addTaskUseCase.execute(task)
+        
+        scheduleNotification(for: task)
+        print("[TaskFormViewModel] Notification scheduled for task: \(task.title)")
+        
+        try await syncTaskToGoogleCalendarIfNeeded(task)
+    }
+
+    private func syncTaskToGoogleCalendarIfNeeded(_ task: TaskModel) async throws {
+        guard let syncUseCase = syncTaskToGoogleCalendarUseCase else {
+            print("[TaskFormViewModel] Skipping Google Calendar sync (syncUseCase is nil)")
+            return
+        }
+        
+        print("[TaskFormViewModel] Attempting to sync task to Google Calendar: \(task.title)")
+        
+        do {
+            let eventIdMap = try await syncUseCase.execute(task: task)
+            print("[TaskFormViewModel] eventIdMap from sync: \(eventIdMap)")
+            try await updateTaskWithEventIds(task: task, eventIdMap: eventIdMap)
+        } catch {
+            let syncErrorMsg = error.localizedDescription.isEmpty
+                ? "Failed to sync task to Google Calendar. Please check your connection or re-authenticate."
+                : error.localizedDescription
+            self.error = syncErrorMsg
+            print("[TaskFormViewModel] Failed to sync task to Google Calendar: \(syncErrorMsg)")
+        }
+    }
+
 
     // MARK: - Notification Scheduling
     private func scheduleNotification(for task: TaskModel) {

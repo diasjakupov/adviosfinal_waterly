@@ -20,8 +20,7 @@ final class HomeViewController: UIViewController {
     private let taskRepository: DefaultTaskRepository
     private let settingsRepository: SettingsRepositoryImpl
     
-    private var editingTaskBox = StateBox<TaskModel?>(wrappedValue: nil)
-    private var showTaskFormBox = StateBox<Bool>(wrappedValue: false)
+    private var editingTask: TaskModel? = nil
     
     init() {
         let repository = DefaultHomeRepository()
@@ -54,13 +53,7 @@ final class HomeViewController: UIViewController {
                 onAddTask: { [weak self] in self?.gotoForm() },
                 onSettings: { [weak self] in self?.showSettings() },
                 onAnalytics: { [weak self] in self?.showStatistics() },
-                editingTask: editingTaskBox.binding,
-                showTaskForm: showTaskFormBox.binding,
-                updateTaskUseCase: updateTaskUseCase,
-                addTaskUseCase: addTaskUseCase,
-                getCategoriesUseCase: getCategoriesUseCase,
-                syncTaskToGoogleCalendarUseCase: syncTaskToGoogleCalendarUseCase,
-                restoreSignInUseCase: restoreSignInUseCase
+                onEditTask: { [weak self] task in self?.gotoEditForm(task) }
             )
             .environmentObject(vm)
         )
@@ -75,6 +68,12 @@ final class HomeViewController: UIViewController {
         navigationController?.pushViewController(TaskFormViewController(), animated: true)
     }
     
+    private func gotoEditForm(_ task: TaskModel) {
+        let vc = TaskFormViewController()
+        vc.setEditingTask(task)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+    
     private func showSettings() {
         let vc = SettingsViewController()
         vc.allTasks = vm.allTasks
@@ -85,10 +84,4 @@ final class HomeViewController: UIViewController {
         let vc = StatisticsViewController()
         navigationController?.pushViewController(vc, animated: true)
     }
-}
-
-final class StateBox<Value>: ObservableObject {
-    @Published var wrappedValue: Value
-    var binding: Binding<Value> { Binding(get: { self.wrappedValue }, set: { self.wrappedValue = $0 }) }
-    init(wrappedValue: Value) { self.wrappedValue = wrappedValue }
 }
