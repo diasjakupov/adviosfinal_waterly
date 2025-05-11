@@ -20,18 +20,6 @@ struct HomeScreen: View {
     @State private var calendarSheet: CalendarSheetState? = nil
     @State private var infoTaskError: String? = nil
     
-    private let days: [DayStub] = {
-        let cal = Calendar.current
-        let today = cal.startOfDay(for: Date())
-        return (0..<10).map { offset in
-            DayStub(
-                date: cal.date(byAdding: .day, value: offset, to: today)!,
-                groups: [("Daily", .random(in:1...4)),
-                         ("Work",  .random(in:1...4))]
-            )
-        }
-    }()
-    
     init(onAddTask: @escaping () -> Void,
         onSettings: @escaping () -> Void,
         onAnalytics: @escaping () -> Void,
@@ -45,65 +33,49 @@ struct HomeScreen: View {
     var body: some View {
         ZStack {
             Color.wBackground.ignoresSafeArea()
-            
-            switch vm.tab {
-             case .today:     todayTab
-             case .calendar:  calendarTab
-             }
-            if let error = vm.error {
-                ErrorBanner(message: error)
-            }
+            mainTabView
+            errorBanner
         }
         .preferredColorScheme(.dark)
         .sheetTaskInfo(
             task: $infoTask,
             error: $infoTaskError,
-            onChangeStatus: { task, status in
-                vm.setStatus(of: task.id, to: status)
-            },
-            onEdit: { taskUI in
-                if let model = vm.findTaskModel(by: taskUI.id) {
-                    infoTask = nil
-                    onEditTask(model)
-                }
-            },
-            onDelete: { taskUI in
-                if let model = vm.findTaskModel(by: taskUI.id) {
-                    Task {
-                        do {
-                            try await vm.deleteTask(model)
-                            infoTask = nil
-                        } catch {
-                            infoTaskError = error.localizedDescription
-                        }
-                    }
-                }
-            }
+            onChangeStatus: { task, status in vm.setStatus(of: task.id, to: status) },
+            onEdit: { handleEdit(taskUI: $0, dismiss: { infoTask = nil }) },
+            onDelete: { handleDelete(taskUI: $0, dismiss: { infoTask = nil }) }
         )
     }
     
+    // MARK: - Main Tab View
+    @ViewBuilder
+    private var mainTabView: some View {
+        switch vm.tab {
+        case .today:
+            todayTab
+        case .calendar:
+            calendarTab
+        }
+    }
+    
+    // MARK: - Today Tab
     private var todayTab: some View {
         VStack(spacing: 32) {
             Toolbar(selected: vm.tab,
                     onSettingsClick: onSettings,
-                    onAnalyticsClick: onAnalytics) { tab in
-                vm.switchTab(tab)
-            }
-            .padding(.horizontal)
-            .padding(.top, 8)
-            
+                    onAnalyticsClick: onAnalytics) { tab in vm.switchTab(tab) }
+                .padding(.horizontal)
+                .padding(.top, 8)
             WaveGauge(fraction: vm.doneFraction)
                 .frame(width: 260, height: 260)
                 .onTapGesture { onAddTask() }
-            
             TasksSection(tasks: vm.today.enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }) { t in
                 infoTask = t
             }
-            
             Spacer()
         }
     }
     
+    // MARK: - Calendar Tab
     private var calendarTab: some View {
         VStack(spacing: 16) {
             Toolbar(selected: vm.tab,
@@ -114,9 +86,7 @@ struct HomeScreen: View {
                 LazyVStack(spacing: 16) {
                     ForEach(vm.calendarDays) { day in
                         CalendarCard(day: day)
-                            .onTapGesture {
-                                calendarSheet = .date(day.date)
-                            }
+                            .onTapGesture { calendarSheet = .date(day.date) }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -126,29 +96,72 @@ struct HomeScreen: View {
             Spacer()
         }
         .sheet(item: $calendarSheet) { sheet in
-            switch sheet {
-            case .date(let date):
-                let tasks = (vm.grouped[date] ?? []).enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }
-                VStack(alignment: .leading, spacing: 16) {
-                    Text(date.formatted(date: .long, time: .omitted))
-                        .font(.title2).bold().foregroundColor(.white)
-                        .padding(.top, 16)
-                        .padding(.horizontal)
-                    TasksSection(tasks: tasks) { t in
-                        calendarSheet = .task(t)
-                    }
+            calendarSheetView(sheet: sheet)
+        }
+    }
+    
+    // MARK: - Calendar Sheet View
+    @ViewBuilder
+    private func calendarSheetView(sheet: CalendarSheetState) -> some View {
+        switch sheet {
+        case .date(let date):
+            let tasks = (vm.grouped[date] ?? []).enumerated().map { TaskModelMapper.toUi($0.element, index: $0.offset) }
+            VStack(alignment: .leading, spacing: 16) {
+                Text(date.formatted(date: .long, time: .omitted))
+                    .font(.title2).bold().foregroundColor(.white)
+                    .padding(.top, 16)
+                    .padding(.horizontal)
+                TasksSection(tasks: tasks) { t in
+                    calendarSheet = .task(t)
                 }
-                .background(Color.wSurface)
-                .presentationDetents([.medium, .large])
-            case .task(let task):
-                TaskInfoBottomSheet(
-                    task: task,
-                    onDismiss: { calendarSheet = nil },
-                    onChangeStatus: { newStatus in
-                        vm.setStatus(of: task.id, to: newStatus)
-                    }
-                )
+            }
+            .background(Color.wSurface)
+            .presentationDetents([.medium, .large])
+        case .task(let task):
+            makeTaskInfoBottomSheet(task: task, onDismiss: {
+                infoTaskError = nil
+                calendarSheet = nil
+            })
                 .presentationDetents([.medium])
+        }
+    }
+    
+    // MARK: - Error Banner
+    @ViewBuilder
+    private var errorBanner: some View {
+        if let error = vm.error {
+            ErrorBanner(message: error)
+        }
+    }
+    
+    // MARK: - TaskInfoBottomSheet Helper
+    private func makeTaskInfoBottomSheet(task: TaskUI, onDismiss: @escaping () -> Void) -> some View {
+        TaskInfoBottomSheet(
+            task: task,
+            onDismiss: onDismiss,
+            onChangeStatus: { newStatus in vm.setStatus(of: task.id, to: newStatus) },
+            onEdit: { handleEdit(taskUI: $0, dismiss: onDismiss) },
+            onDelete: { handleDelete(taskUI: $0, dismiss: onDismiss) },
+            error: infoTaskError
+        )
+    }
+    
+    // MARK: - Handlers
+    private func handleEdit(taskUI: TaskUI, dismiss: @escaping () -> Void) {
+        if let model = vm.findTaskModel(by: taskUI.id) {
+            dismiss()
+            onEditTask(model)
+        }
+    }
+    private func handleDelete(taskUI: TaskUI, dismiss: @escaping () -> Void) {
+        if let model = vm.findTaskModel(by: taskUI.id) {
+            Task {
+                do {
+                    try await vm.deleteTask(model)
+                    dismiss()
+                } catch {
+                    infoTaskError = error.localizedDescription
+                }
             }
         }
     }
