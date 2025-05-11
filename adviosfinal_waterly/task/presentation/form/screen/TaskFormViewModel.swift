@@ -94,7 +94,7 @@ final class TaskFormViewModel: ObservableObject {
                     try await addTaskUseCase.execute(task)
                     scheduleNotification(for: task)
                     print("[TaskFormViewModel] Notification scheduled for task: \(task.title)")
-                    if let syncUseCase = syncTaskToGoogleCalendarUseCase, let updateTaskUseCase = updateTaskUseCase {
+                    if let syncUseCase = syncTaskToGoogleCalendarUseCase {
                         print("[TaskFormViewModel] Attempting to sync task to Google Calendar: \(task.title)")
                         do {
                             try await restoreGoogleSignInUseCase.execute()
